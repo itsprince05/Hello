@@ -125,10 +125,13 @@ def get_login_html(error=None):
         .navbar-title {{ 
             font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; 
         }}
+        .container {{ 
+            max-width: 800px; margin: 0 auto; padding: 10px; box-sizing: border-box; 
+        }}
         .login-box {{ 
             background: white; padding: 25px 20px; border-radius: 10px; 
-            box-shadow: none; width: calc(100% - 20px); max-width: 320px; 
-            margin: 10px auto;
+            box-shadow: none; width: 100%; max-width: 320px; 
+            margin: 0 auto;
             text-align: center; border: 1px solid #e0e0e0; box-sizing: border-box;
         }}
         h2 {{ color: #1c1e21; margin-bottom: 25px; font-weight: 600; font-size: 22px; }}
@@ -139,7 +142,7 @@ def get_login_html(error=None):
         input:focus {{ border-color: #2481cc; }}
         button {{ 
             width: 100%; padding: 14px; background: #2481cc; color: white; 
-            border: none; border-radius: 8px; font-size: 16px; font-weight: 600; 
+            border: none; border-radius: 10px; font-size: 16px; font-weight: 600; 
             cursor: pointer; transition: background 0.2s; 
         }}
         button:hover {{ background: #1a6fba; }}
@@ -154,12 +157,14 @@ def get_login_html(error=None):
         <div class="navbar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music4-icon lucide-music-4"><path d="M9 18V5l12-2v13"/><path d="m9 9 12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <div class="navbar-title">Bot Dashboard</div>
     </div>
-    <div class="login-box">
-        <h2>Welcome Back</h2>
-        <form method="POST" action="/login">
-            <input type="password" name="password" placeholder="Enter Password" autocomplete="off" required>
-            <button type="submit">Login</button>
-        </form>
+    <div class="container">
+        <div class="login-box">
+            <h2>Welcome Back</h2>
+            <form method="POST" action="/login">
+                <input type="password" name="password" placeholder="Enter Password" autocomplete="off" required>
+                <button type="submit">Login</button>
+            </form>
+        </div>
     </div>
 </body>
 </html>'''
