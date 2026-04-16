@@ -622,23 +622,6 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message_text, parse_mode="HTML")
 
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat = update.effective_chat
-    if not is_allowed(chat.id):
-        return
-
-    add_log("COMMAND", f"/help used in {chat.title} ({chat.id})")
-
-    message_text = (
-        "/start - Show group name and ID\n"
-        "/dashboard - Get dashboard access URL\n"
-        "/update - Update bot from repo (admin only)\n"
-        "/list - Show all commands\n"
-        "/help - Show this help message"
-    )
-    await update.message.reply_text(message_text, parse_mode="HTML")
-
-
 async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     if not is_allowed(chat.id):
@@ -647,13 +630,11 @@ async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_log("COMMAND", f"/list used in {chat.title} ({chat.id})")
 
     message_text = (
-        "/start - Show group name and ID\n"
-        "/dashboard - Get dashboard access URL\n"
-        "/update - Update bot from repo (admin only)\n"
-        "/list - Show all commands\n"
-        "/help - Show this help message"
+        "/start - Group Name and ID\n"
+        "/dashboard - Dashboard URL\n"
+        "/update - Update Bot"
     )
-    await update.message.reply_text(message_text, parse_mode="HTML")
+    await update.message.reply_text(message_text)
 
 
 async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -773,7 +754,6 @@ def main():
     # Command handlers
     bot_app.add_handler(CommandHandler("start", start_command))
     bot_app.add_handler(CommandHandler("dashboard", dashboard_command))
-    bot_app.add_handler(CommandHandler("help", help_command))
     bot_app.add_handler(CommandHandler("list", list_command))
     bot_app.add_handler(CommandHandler("update", update_command))
 
