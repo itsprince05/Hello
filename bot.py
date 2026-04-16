@@ -543,10 +543,11 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 def run_flask():
     try:
-        logger.info(f"Flask starting on 0.0.0.0:{DASHBOARD_PORT}")
-        flask_app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False, threaded=True)
+        from waitress import serve
+        logger.info(f"Starting waitress server on 0.0.0.0:{DASHBOARD_PORT}")
+        serve(flask_app, host="0.0.0.0", port=DASHBOARD_PORT, threads=4)
     except Exception as e:
-        logger.error(f"Flask CRASHED: {e}")
+        logger.error(f"Server CRASHED: {e}")
 
 
 async def send_startup_message(bot_app):
