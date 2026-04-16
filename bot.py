@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 # ─── GLOBALS ──────────────────────────────────────────────────────────────────
 tunnel_url = None
 dashboard_password = None
+tunnel_process = None
 active_groups = {}
 activity_logs = []
 MAX_LOGS = 200
@@ -498,7 +499,7 @@ def ensure_cloudflared():
 
 
 def start_cloudflare_tunnel():
-    global tunnel_url
+    global tunnel_url, tunnel_process
 
     if not ensure_cloudflared():
         add_log("ERROR", "cloudflared binary not available")
@@ -506,13 +507,13 @@ def start_cloudflare_tunnel():
 
     try:
         logger.info(f"Starting cloudflare tunnel with: {CLOUDFLARED_PATH}")
-        process = subprocess.Popen(
+        tunnel_process = subprocess.Popen(
             [CLOUDFLARED_PATH, "tunnel", "--url", f"http://localhost:{DASHBOARD_PORT}"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
         )
-        for line in process.stdout:
+        for line in tunnel_process.stdout:
             line_stripped = line.strip()
             if line_stripped:
                 logger.info(f"[cloudflared] {line_stripped}")
@@ -526,12 +527,43 @@ def start_cloudflare_tunnel():
         if not tunnel_url:
             logger.error("Tunnel process ended without producing a URL")
             add_log("ERROR", "Tunnel failed to produce URL")
+            return
+
+        # Keep reading stdout in background so process doesn't die from buffer overflow
+        def drain_output():
+            try:
+                for line in tunnel_process.stdout:
+                    pass  # Just drain the output
+            except:
+                pass
+
+        threading.Thread(target=drain_output, daemon=True).start()
+
     except FileNotFoundError:
         logger.error(f"cloudflared binary not found at: {CLOUDFLARED_PATH}")
         add_log("ERROR", "cloudflared binary not found")
     except Exception as e:
         logger.error(f"Failed to start cloudflare tunnel: {e}")
         add_log("ERROR", f"Tunnel failed: {e}")
+
+
+def stop_tunnel():
+    """Kill the current tunnel process"""
+    global tunnel_process, tunnel_url
+    tunnel_url = None
+    if tunnel_process:
+        try:
+            tunnel_process.kill()
+            tunnel_process.wait(timeout=5)
+        except:
+            pass
+        tunnel_process = None
+
+
+def restart_tunnel():
+    """Stop old tunnel and start a new one"""
+    stop_tunnel()
+    start_cloudflare_tunnel()
 
 
 # ─── FLASK DASHBOARD ─────────────────────────────────────────────────────────
@@ -608,18 +640,23 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_allowed(chat.id):
         return
 
-    if not tunnel_url:
-        await update.message.reply_text("Tunnel is not ready yet. Please wait...")
-        return
-
     add_log("COMMAND", f"/dashboard used in {chat.title} ({chat.id})")
 
-    message_text = (
-        f"Password\n"
-        f"<code>{dashboard_password}</code>\n\n"
-        f"{tunnel_url}"
-    )
-    await update.message.reply_text(message_text, parse_mode="HTML")
+    msg = await update.message.reply_text("Generating new tunnel...")
+
+    # Restart tunnel in background and wait for new URL
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, restart_tunnel)
+
+    if tunnel_url:
+        message_text = (
+            f"Password\n"
+            f"<code>{dashboard_password}</code>\n\n"
+            f"{tunnel_url}"
+        )
+        await msg.edit_text(message_text, parse_mode="HTML")
+    else:
+        await msg.edit_text("Failed to generate tunnel. Try again.")
 
 
 async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
