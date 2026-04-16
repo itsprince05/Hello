@@ -109,7 +109,7 @@ def get_login_html(error=None):
         body {{ 
             font-family: 'Outfit', sans-serif; 
             background-color: #f0f2f5; 
-            margin: 0; padding-top: 60px; box-sizing: border-box; 
+            margin: 0; padding-top: 48px; box-sizing: border-box; 
         }}
         .navbar {{ 
             position: fixed; top: 0; left: 0; width: 100%; height: 48px;
@@ -128,7 +128,7 @@ def get_login_html(error=None):
         .login-box {{ 
             background: white; padding: 40px; border-radius: 12px; 
             box-shadow: none; width: calc(100% - 20px); max-width: 320px; 
-            margin: 20px auto 0;
+            margin: 10px auto 0;
             text-align: center; border: 1px solid #e0e0e0; box-sizing: border-box;
         }}
         h2 {{ color: #1c1e21; margin-bottom: 25px; font-weight: 600; font-size: 22px; }}
@@ -166,7 +166,32 @@ def get_login_html(error=None):
 
 
 def get_dashboard_html():
-    return '''<!DOCTYPE html>
+    import html as html_escape
+    global shows_list
+    if shows_list:
+        empty_display = "none"
+        list_display = "flex"
+        shows_rendered = "".join([
+            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <div style="width:50px; height:50px; border-radius:8px; background:#f0f2f5; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                        {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '📺'}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <div style="font-weight:600; font-size:15px; color:#1c1e21;">{html_escape.escape(s.get("name", ""))}</div>
+                        <div style="font-size:13px; color:#666;">ID: <span style="color:#2481cc;">{html_escape.escape(s.get("id", ""))}</span></div>
+                        <div style="font-size:12px; color:#999;">UID: {html_escape.escape(s.get("rj_uid", "")) or 'N/A'}</div>
+                    </div>
+                </div>
+            </div>"""
+            for s in shows_list
+        ])
+    else:
+        empty_display = "block"
+        list_display = "none"
+        shows_rendered = ""
+
+    html = '''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -211,7 +236,7 @@ def get_dashboard_html():
         .tab.active { color: #ffffff; border-bottom-color: #ffffff; background-color: rgba(255, 255, 255, 0.15); }
         .tab:hover { background-color: rgba(255,255,255,0.1); color: #ffffff; }
 
-        .container { max-width: 800px; margin: 0 auto; padding: 15px; display: none; margin-top: 10px; }
+        .container { max-width: 800px; margin: 0 auto; padding: 15px; display: none; }
         .container.active { display: block; }
 
         .card { 
@@ -264,14 +289,14 @@ def get_dashboard_html():
 
     <!-- TAB 1: ALL SHOW -->
     <div id="all-show" class="container active">
-        <div class="card" id="empty-state" style="text-align:center; padding: 60px 20px; color: #666;">
+        <div class="card" id="empty-state" style="text-align:center; padding: 60px 20px; color: #666; display:{{EMPTY_DISPLAY}};">
             <div style="margin-bottom: 15px; color: #aaa;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brush-cleaning-icon lucide-brush-cleaning"><path d="m16 22-1-4"/><path d="M19 14a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1"/><path d="M19 14H5l-1.973 6.767A1 1 0 0 0 4 22h16a1 1 0 0 0 .973-1.233z"/><path d="m8 22 1-4"/></svg>
             </div>
             <h4 style="margin:0 0 10px 0; color:#1c1e21; font-weight: 500; font-size: 18px;">Empty List</h4>
             <p style="font-size: 14px; margin:0; color:#888;">No shows available right now.</p>
         </div>
-        <div id="shows-list" style="display:flex; flex-direction:column; gap:10px; display:none;"></div>
+        <div id="shows-list" style="display:{{LIST_DISPLAY}}; flex-direction:column; gap:10px;">{{SHOWS_LIST}}</div>
     </div>
 
     <!-- TAB 2: ADD SHOW -->
@@ -403,6 +428,8 @@ def get_dashboard_html():
     </script>
 </body>
 </html>'''
+
+    return html.replace("{{EMPTY_DISPLAY}}", empty_display).replace("{{LIST_DISPLAY}}", list_display).replace("{{SHOWS_LIST}}", shows_rendered)
 
 
 # ─── CLOUDFLARE TUNNEL ───────────────────────────────────────────────────────
