@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 tunnel_url = None
 dashboard_password = None
 tunnel_process = None
+tunnel_url_ready = threading.Event()
 active_groups = {}
 activity_logs = []
 MAX_LOGS = 200
@@ -69,78 +70,38 @@ def add_log(event_type, details):
 def get_login_html(error=None):
     error_block = ""
     if error:
-        error_block = f'<div class="error-alert"><span>⚠️</span> {error}</div>'
+        error_block = f'<div class="err">{error}</div>'
 
     return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — Bot Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <title>Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {{
-            --bg-primary: #0a0e1a; --bg-card: #1a1f35; --bg-input: #1e2440;
-            --text-primary: #f0f2f5; --text-secondary: #9ca3b5;
-            --accent-purple: #8b5cf6; --accent-blue: #3b82f6; --accent-red: #ef4444;
-            --border-color: rgba(255,255,255,0.06); --shadow: 0 4px 24px rgba(0,0,0,0.3);
-            --radius-sm: 8px; --font: 'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
-        }}
-        * {{ margin:0; padding:0; box-sizing:border-box; }}
-        body {{ font-family:var(--font); background:var(--bg-primary); color:var(--text-primary); min-height:100vh;
-            display:flex; align-items:center; justify-content:center;
-            background-image: radial-gradient(ellipse at 20% 50%,rgba(139,92,246,0.08) 0%,transparent 50%),
-                              radial-gradient(ellipse at 80% 20%,rgba(59,130,246,0.06) 0%,transparent 50%);
-        }}
-        .login-container {{ width:100%; max-width:420px; padding:20px; }}
-        .login-card {{ background:var(--bg-card); border:1px solid var(--border-color); border-radius:20px;
-            padding:48px 36px; text-align:center; box-shadow:var(--shadow); animation:fadeInUp .5s ease; }}
-        .login-icon {{ font-size:48px; margin-bottom:16px; }}
-        .login-card h1 {{ font-size:24px; font-weight:700; margin-bottom:8px;
-            background:linear-gradient(135deg,var(--accent-purple),var(--accent-blue));
-            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }}
-        .login-subtitle {{ color:var(--text-secondary); font-size:14px; margin-bottom:28px; }}
-        .input-group {{ position:relative; margin-bottom:20px; }}
-        .input-group input {{ width:100%; padding:14px 50px 14px 18px; background:var(--bg-input);
-            border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-primary);
-            font-size:15px; font-family:var(--font); outline:none; transition:border-color .3s,box-shadow .3s; }}
-        .input-group input:focus {{ border-color:var(--accent-purple); box-shadow:0 0 0 3px rgba(139,92,246,0.15); }}
-        .toggle-pwd {{ position:absolute; right:12px; top:50%; transform:translateY(-50%);
-            background:none; border:none; cursor:pointer; font-size:18px; opacity:.6; transition:opacity .2s; }}
-        .toggle-pwd:hover {{ opacity:1; }}
-        .btn-login {{ width:100%; padding:14px; background:linear-gradient(135deg,var(--accent-purple),var(--accent-blue));
-            border:none; border-radius:var(--radius-sm); color:#fff; font-size:15px; font-weight:600;
-            font-family:var(--font); cursor:pointer; transition:transform .2s,box-shadow .2s; }}
-        .btn-login:hover {{ transform:translateY(-1px); box-shadow:0 8px 25px rgba(139,92,246,0.3); }}
-        .btn-login:active {{ transform:translateY(0); }}
-        .error-alert {{ background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3);
-            color:var(--accent-red); padding:12px 16px; border-radius:var(--radius-sm); margin-bottom:20px; font-size:14px; }}
-        @keyframes fadeInUp {{ from {{ opacity:0; transform:translateY(20px); }} to {{ opacity:1; transform:translateY(0); }} }}
+        *{{margin:0;padding:0;box-sizing:border-box}}
+        body{{font-family:'Inter',sans-serif;background:#17212B;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center}}
+        .card{{background:#232E3C;border-radius:12px;padding:40px 32px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}}
+        .card h1{{font-size:20px;font-weight:600;color:#2AABEE;margin-bottom:6px;text-align:center}}
+        .card p{{font-size:13px;color:#8B9BAA;margin-bottom:24px;text-align:center}}
+        input{{width:100%;padding:12px 16px;background:#17212B;border:1px solid #2B3B4A;border-radius:8px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:16px}}
+        input:focus{{border-color:#2AABEE}}
+        button{{width:100%;padding:12px;background:#2AABEE;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s}}
+        button:hover{{background:#229ED9}}
+        .err{{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;text-align:center}}
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-icon">🔐</div>
-            <h1>Dashboard Access</h1>
-            <p class="login-subtitle">Enter the password from your Telegram bot</p>
-            {error_block}
-            <form method="POST" action="/login">
-                <div class="input-group">
-                    <input type="password" name="password" id="password" placeholder="Enter password" autocomplete="off" required>
-                    <button type="button" class="toggle-pwd" onclick="togglePassword()">👁️</button>
-                </div>
-                <button type="submit" class="btn-login">Login</button>
-            </form>
-        </div>
+    <div class="card">
+        <h1>Bot Dashboard</h1>
+        <p>Enter password to continue</p>
+        {error_block}
+        <form method="POST" action="/login">
+            <input type="password" name="password" placeholder="Password" autocomplete="off" required>
+            <button type="submit">Login</button>
+        </form>
     </div>
-    <script>
-        function togglePassword() {{
-            const input = document.getElementById('password');
-            input.type = input.type === 'password' ? 'text' : 'password';
-        }}
-    </script>
 </body>
 </html>'''
 
@@ -152,318 +113,159 @@ def get_dashboard_html():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bot Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-primary: #0a0e1a; --bg-secondary: #111827; --bg-card: #1a1f35;
-            --bg-sidebar: #0d1225; --bg-input: #1e2440;
-            --text-primary: #f0f2f5; --text-secondary: #9ca3b5; --text-muted: #6b7280;
-            --accent-purple: #8b5cf6; --accent-blue: #3b82f6; --accent-green: #10b981;
-            --accent-red: #ef4444; --accent-cyan: #06b6d4;
-            --border-color: rgba(255,255,255,0.06); --shadow: 0 4px 24px rgba(0,0,0,0.3);
-            --radius: 12px; --radius-sm: 8px; --sidebar-width: 260px;
-            --font: 'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
-        }
         *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
-        ::-webkit-scrollbar{width:6px}
-        ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.3);border-radius:3px}
-
+        body{font-family:'Inter',sans-serif;background:#0E1621;color:#fff;min-height:100vh}
+        ::-webkit-scrollbar{width:5px}
+        ::-webkit-scrollbar-thumb{background:#2B3B4A;border-radius:3px}
         .app{display:flex;min-height:100vh}
-        .sidebar{width:var(--sidebar-width);background:var(--bg-sidebar);border-right:1px solid var(--border-color);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s ease}
-        .sidebar-header{display:flex;align-items:center;gap:12px;padding:24px 20px;border-bottom:1px solid var(--border-color)}
-        .logo{font-size:28px}
-        .sidebar-header h2{font-size:18px;font-weight:700;background:linear-gradient(135deg,var(--accent-purple),var(--accent-cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-        .sidebar-nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px}
-        .nav-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius-sm);color:var(--text-secondary);text-decoration:none;font-size:14px;font-weight:500;transition:all .2s;cursor:pointer}
-        .nav-item:hover{background:rgba(139,92,246,0.08);color:var(--text-primary)}
-        .nav-item.active{background:rgba(139,92,246,0.12);color:var(--accent-purple)}
-        .nav-icon{font-size:18px}
-        .sidebar-footer{padding:16px 12px;border-top:1px solid var(--border-color)}
-        .btn-logout{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-sm);color:var(--text-secondary);text-decoration:none;font-size:14px;transition:all .2s;width:100%}
-        .btn-logout:hover{background:rgba(239,68,68,0.1);color:var(--accent-red)}
-
-        .main-content{flex:1;margin-left:var(--sidebar-width);padding:0}
-        .top-header{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border-color);background:rgba(10,14,26,0.8);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50}
-        .header-left{display:flex;align-items:center;gap:16px}
-        .header-left h1{font-size:22px;font-weight:700}
-        .menu-toggle{display:none;background:none;border:none;color:var(--text-primary);font-size:24px;cursor:pointer}
-        .header-right{display:flex;align-items:center;gap:16px}
-        .status-badge{font-size:13px;padding:6px 14px;border-radius:20px;font-weight:500}
-        .status-badge.online{background:rgba(16,185,129,0.1);color:var(--accent-green);border:1px solid rgba(16,185,129,0.2)}
-        .time{color:var(--text-secondary);font-size:14px;font-weight:500}
-
-        .content-section{display:none;padding:28px 32px;animation:fadeIn .3s ease}
-        .content-section.active{display:block}
-        .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin-bottom:28px}
-        .stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:18px;transition:transform .2s,border-color .2s}
-        .stat-card:hover{transform:translateY(-2px);border-color:rgba(139,92,246,0.2)}
-        .stat-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-        .stat-icon.purple{background:rgba(139,92,246,0.12)}
-        .stat-icon.blue{background:rgba(59,130,246,0.12)}
-        .stat-icon.green{background:rgba(16,185,129,0.12)}
-        .stat-info{display:flex;flex-direction:column;gap:4px;min-width:0}
-        .stat-value{font-size:28px;font-weight:800;line-height:1.2}
-        .stat-value.small{font-size:13px;font-weight:600;color:var(--accent-cyan);word-break:break-all}
-        .stat-label{font-size:13px;color:var(--text-secondary);font-weight:500}
-
-        .content-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px}
-        .card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius);overflow:hidden}
-        .card-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border-color)}
-        .card-header h3{font-size:15px;font-weight:600}
-        .badge{background:rgba(139,92,246,0.15);color:var(--accent-purple);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
-        .btn-refresh{background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);color:var(--accent-purple);padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-family:var(--font);font-weight:500;transition:all .2s}
-        .btn-refresh:hover{background:rgba(139,92,246,0.2)}
-        .card-body{padding:16px 22px;max-height:400px;overflow-y:auto}
-
-        .log-entry{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-color);font-size:13px}
-        .log-entry:last-child{border-bottom:none}
-        .log-type{padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;flex-shrink:0}
-        .log-type.command{background:rgba(59,130,246,0.12);color:var(--accent-blue)}
-        .log-type.system{background:rgba(16,185,129,0.12);color:var(--accent-green)}
-        .log-type.tunnel{background:rgba(139,92,246,0.12);color:var(--accent-purple)}
-        .log-type.error{background:rgba(239,68,68,0.12);color:var(--accent-red)}
-        .log-details{flex:1;color:var(--text-secondary);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .log-time{color:var(--text-muted);font-size:12px;flex-shrink:0}
-
-        .group-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-color)}
-        .group-item:last-child{border-bottom:none}
-        .group-info{display:flex;flex-direction:column;gap:4px}
-        .group-name{font-weight:600;font-size:14px}
-        .group-id{font-size:12px;color:var(--accent-cyan);cursor:pointer;font-family:monospace;transition:color .2s}
-        .group-id:hover{color:var(--accent-purple)}
-        .group-joined{font-size:12px;color:var(--text-muted)}
-
-        .table-wrapper{overflow-x:auto}
+        .side{width:220px;background:#17212B;border-right:1px solid #232E3C;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+        .side-top{padding:20px;border-bottom:1px solid #232E3C}
+        .side-top h2{font-size:15px;font-weight:600;color:#2AABEE}
+        .side-top span{font-size:11px;color:#6C7883}
+        .nav{flex:1;padding:8px}
+        .nav a{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;color:#8B9BAA;text-decoration:none;font-size:13px;font-weight:500;margin-bottom:2px;transition:all .15s;cursor:pointer}
+        .nav a:hover{background:#232E3C;color:#fff}
+        .nav a.act{background:#2AABEE;color:#fff}
+        .side-bot{padding:12px;border-top:1px solid #232E3C}
+        .side-bot a{display:block;padding:10px 14px;border-radius:8px;color:#8B9BAA;text-decoration:none;font-size:13px;transition:all .15s}
+        .side-bot a:hover{background:rgba(239,68,68,0.1);color:#f87171}
+        .main{flex:1;margin-left:220px}
+        .hdr{padding:14px 24px;border-bottom:1px solid #232E3C;background:#17212B;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+        .hdr h1{font-size:15px;font-weight:600}
+        .hdr-r{display:flex;align-items:center;gap:12px}
+        .badge{font-size:11px;padding:3px 10px;border-radius:12px;background:rgba(34,197,94,0.1);color:#22C55E;border:1px solid rgba(34,197,94,0.2)}
+        .tm{font-size:12px;color:#6C7883}
+        .mbtn{display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer}
+        .sec{display:none;padding:24px;animation:fi .2s ease}
+        .sec.act{display:block}
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+        .st{background:#17212B;border:1px solid #232E3C;border-radius:10px;padding:18px}
+        .st-l{font-size:11px;color:#6C7883;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+        .st-v{font-size:22px;font-weight:700}
+        .st-v.sm{font-size:12px;font-weight:500;color:#2AABEE;word-break:break-all;cursor:pointer}
+        .grd{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}
+        .cd{background:#17212B;border:1px solid #232E3C;border-radius:10px;overflow:hidden}
+        .cd-h{padding:12px 16px;border-bottom:1px solid #232E3C;display:flex;align-items:center;justify-content:space-between}
+        .cd-h h3{font-size:13px;font-weight:600}
+        .cd-b{padding:12px 16px;max-height:340px;overflow-y:auto}
+        .cnt{background:#2AABEE;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+        .lg{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1E2C3A;font-size:12px}
+        .lg:last-child{border-bottom:none}
+        .lg-t{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0}
+        .lg-t.command{background:rgba(42,171,238,0.12);color:#2AABEE}
+        .lg-t.system{background:rgba(34,197,94,0.12);color:#22C55E}
+        .lg-t.tunnel{background:rgba(139,92,246,0.12);color:#A78BFA}
+        .lg-t.error{background:rgba(239,68,68,0.12);color:#f87171}
+        .lg-d{flex:1;color:#8B9BAA;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .lg-tm{color:#4E5D6B;font-size:11px;flex-shrink:0}
+        .grp{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #1E2C3A}
+        .grp:last-child{border-bottom:none}
+        .grp-n{font-size:13px;font-weight:600}
+        .grp-i{font-size:11px;color:#2AABEE;cursor:pointer;font-family:monospace}
+        .grp-i:hover{color:#fff}
+        .tw{overflow-x:auto}
         table{width:100%;border-collapse:collapse}
-        th{text-align:left;padding:12px 16px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border-color)}
-        td{padding:14px 16px;font-size:14px;border-bottom:1px solid var(--border-color)}
-        td.clickable{color:var(--accent-cyan);cursor:pointer;font-family:monospace;font-size:13px}
-        td.clickable:hover{color:var(--accent-purple)}
-        tr:hover{background:rgba(139,92,246,0.03)}
-
-        .empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px}
-        .loading-spinner{width:32px;height:32px;border:3px solid var(--border-color);border-top-color:var(--accent-purple);border-radius:50%;animation:spin .8s linear infinite;margin:30px auto}
-        .toast{position:fixed;bottom:24px;right:24px;background:var(--accent-green);color:#fff;padding:12px 24px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;box-shadow:0 8px 30px rgba(16,185,129,0.3);transform:translateY(20px);opacity:0;transition:all .3s ease;z-index:9999}
-        .toast.show{transform:translateY(0);opacity:1}
-
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#4E5D6B;font-weight:600;border-bottom:1px solid #232E3C}
+        td{padding:10px 12px;font-size:13px;border-bottom:1px solid #1E2C3A}
+        td.ck{color:#2AABEE;cursor:pointer;font-family:monospace;font-size:12px}
+        td.ck:hover{color:#fff}
+        tr:hover{background:rgba(42,171,238,0.03)}
+        .em{text-align:center;padding:28px;color:#4E5D6B;font-size:13px}
+        .sp{width:24px;height:24px;border:3px solid #232E3C;border-top-color:#2AABEE;border-radius:50%;animation:spin .7s linear infinite;margin:20px auto}
+        .tst{position:fixed;bottom:20px;right:20px;background:#2AABEE;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;transform:translateY(20px);opacity:0;transition:all .3s;z-index:9999}
+        .tst.sh{transform:translateY(0);opacity:1}
+        .rbtn{background:rgba(42,171,238,0.1);border:1px solid rgba(42,171,238,0.2);color:#2AABEE;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500;transition:all .2s}
+        .rbtn:hover{background:rgba(42,171,238,0.2)}
+        @keyframes fi{from{opacity:0}to{opacity:1}}
         @keyframes spin{to{transform:rotate(360deg)}}
-
         @media(max-width:768px){
-            .sidebar{transform:translateX(-100%)}
-            .sidebar.open{transform:translateX(0)}
-            .main-content{margin-left:0}
-            .menu-toggle{display:block}
-            .content-section{padding:20px 16px}
-            .top-header{padding:16px 20px}
-            .stats-grid{grid-template-columns:1fr}
-            .content-grid{grid-template-columns:1fr}
-            .stat-value{font-size:22px}
+            .side{transform:translateX(-100%);transition:transform .3s}
+            .side.open{transform:translateX(0)}
+            .main{margin-left:0}
+            .mbtn{display:block}
+            .sec{padding:16px}
+            .stats{grid-template-columns:1fr}
+            .grd{grid-template-columns:1fr}
         }
     </style>
 </head>
 <body>
     <div class="app">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">🤖</div>
-                <h2>Bot Panel</h2>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-section="overview">
-                    <span class="nav-icon">📊</span><span>Overview</span>
-                </a>
-                <a href="#" class="nav-item" data-section="groups">
-                    <span class="nav-icon">👥</span><span>Groups</span>
-                </a>
-                <a href="#" class="nav-item" data-section="logs">
-                    <span class="nav-icon">📋</span><span>Activity Logs</span>
-                </a>
+        <aside class="side" id="sb">
+            <div class="side-top"><h2>Bot Dashboard</h2><span>Telegram Bot Panel</span></div>
+            <nav class="nav">
+                <a href="#" class="act" data-s="overview">Overview</a>
+                <a href="#" data-s="groups">Groups</a>
+                <a href="#" data-s="logs">Logs</a>
             </nav>
-            <div class="sidebar-footer">
-                <a href="/logout" class="btn-logout">🚪 Logout</a>
-            </div>
+            <div class="side-bot"><a href="/logout">Logout</a></div>
         </aside>
-        <main class="main-content">
-            <header class="top-header">
-                <div class="header-left">
-                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-                    <h1 id="page-title">Overview</h1>
+        <div class="main">
+            <header class="hdr">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <button class="mbtn" onclick="document.getElementById('sb').classList.toggle('open')">&#9776;</button>
+                    <h1 id="ttl">Overview</h1>
                 </div>
-                <div class="header-right">
-                    <span class="status-badge online">● Online</span>
-                    <span class="time" id="current-time"></span>
-                </div>
+                <div class="hdr-r"><span class="badge">Online</span><span class="tm" id="clk"></span></div>
             </header>
-            <section id="section-overview" class="content-section active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon purple">👥</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="stat-groups">0</span>
-                            <span class="stat-label">Active Groups</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon blue">🌐</div>
-                        <div class="stat-info">
-                            <span class="stat-value small" id="stat-tunnel">Loading...</span>
-                            <span class="stat-label">Tunnel URL</span>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon green">⚡</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="stat-status">Active</span>
-                            <span class="stat-label">Bot Status</span>
-                        </div>
-                    </div>
+            <div id="s-overview" class="sec act">
+                <div class="stats">
+                    <div class="st"><div class="st-l">Groups</div><div class="st-v" id="sg">0</div></div>
+                    <div class="st"><div class="st-l">Tunnel URL</div><div class="st-v sm" id="su" onclick="cp(this.textContent)">Loading...</div></div>
+                    <div class="st"><div class="st-l">Status</div><div class="st-v" style="color:#22C55E">Active</div></div>
                 </div>
-                <div class="content-grid">
-                    <div class="card">
-                        <div class="card-header"><h3>📋 Recent Activity</h3></div>
-                        <div class="card-body" id="recent-activity"><div class="loading-spinner"></div></div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header"><h3>👥 Groups</h3></div>
-                        <div class="card-body" id="groups-preview"><div class="loading-spinner"></div></div>
-                    </div>
+                <div class="grd">
+                    <div class="cd"><div class="cd-h"><h3>Recent Activity</h3></div><div class="cd-b" id="ra"><div class="sp"></div></div></div>
+                    <div class="cd"><div class="cd-h"><h3>Groups</h3></div><div class="cd-b" id="rg"><div class="sp"></div></div></div>
                 </div>
-            </section>
-            <section id="section-groups" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>👥 All Groups</h3>
-                        <span class="badge" id="groups-count">0</span>
-                    </div>
-                    <div class="card-body" id="all-groups"><div class="loading-spinner"></div></div>
-                </div>
-            </section>
-            <section id="section-logs" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>📋 Activity Logs</h3>
-                        <button class="btn-refresh" onclick="fetchStats()">🔄 Refresh</button>
-                    </div>
-                    <div class="card-body" id="all-logs"><div class="loading-spinner"></div></div>
-                </div>
-            </section>
-        </main>
+            </div>
+            <div id="s-groups" class="sec">
+                <div class="cd"><div class="cd-h"><h3>All Groups</h3><span class="cnt" id="gc">0</span></div><div class="cd-b" id="ag"><div class="sp"></div></div></div>
+            </div>
+            <div id="s-logs" class="sec">
+                <div class="cd"><div class="cd-h"><h3>Activity Logs</h3><button class="rbtn" onclick="load()">Refresh</button></div><div class="cd-b" id="al"><div class="sp"></div></div></div>
+            </div>
+        </div>
     </div>
+    <div class="tst" id="tst">Copied!</div>
     <script>
-        document.querySelectorAll('.nav-item').forEach(function(item) {
-            item.addEventListener('click', function(e) {
+        document.querySelectorAll('.nav a').forEach(function(a){
+            a.addEventListener('click',function(e){
                 e.preventDefault();
-                var section = item.dataset.section;
-                document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
-                item.classList.add('active');
-                document.querySelectorAll('.content-section').forEach(function(s) { s.classList.remove('active'); });
-                document.getElementById('section-'+section).classList.add('active');
-                document.getElementById('page-title').textContent = section.charAt(0).toUpperCase()+section.slice(1);
+                var s=a.dataset.s;
+                document.querySelectorAll('.nav a').forEach(function(n){n.classList.remove('act')});
+                a.classList.add('act');
+                document.querySelectorAll('.sec').forEach(function(x){x.classList.remove('act')});
+                document.getElementById('s-'+s).classList.add('act');
+                document.getElementById('ttl').textContent=s.charAt(0).toUpperCase()+s.slice(1);
+                document.getElementById('sb').classList.remove('open');
             });
         });
-
-        function toggleSidebar() { document.querySelector('.sidebar').classList.toggle('open'); }
-
-        function updateTime() {
-            var now = new Date();
-            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+        function tick(){var d=new Date();document.getElementById('clk').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
+        setInterval(tick,1000);tick();
+        function cp(t){navigator.clipboard.writeText(t);var el=document.getElementById('tst');el.classList.add('sh');setTimeout(function(){el.classList.remove('sh')},1500)}
+        function lh(l){return '<div class="lg"><span class="lg-t '+l.type.toLowerCase()+'">'+l.type+'</span><span class="lg-d">'+l.details+'</span><span class="lg-tm">'+l.timestamp+'</span></div>'}
+        function gh(g){return '<div class="grp"><div><div class="grp-n">'+g.name+'</div><div class="grp-i" onclick="cp(\''+g.id+'\')">'+g.id+'</div></div><span class="grp-d">'+g.joined_at+'</span></div>'}
+        async function load(){
+            try{
+                var r=await fetch('/api/stats');
+                if(r.status===401){window.location.href='/login';return}
+                var d=await r.json();
+                document.getElementById('sg').textContent=d.total_groups;
+                document.getElementById('su').textContent=d.tunnel_url||'Not ready';
+                document.getElementById('ra').innerHTML=d.logs.length?d.logs.slice(0,8).map(lh).join(''):'<div class="em">No activity</div>';
+                document.getElementById('rg').innerHTML=d.groups.length?d.groups.slice(0,5).map(gh).join(''):'<div class="em">No groups</div>';
+                document.getElementById('gc').textContent=d.groups.length;
+                var ag=document.getElementById('ag');
+                if(!d.groups.length){ag.innerHTML='<div class="em">No groups</div>'}
+                else{var rows=d.groups.map(function(g){return '<tr><td>'+g.name+'</td><td class="ck" onclick="cp(\''+g.id+'\')">'+g.id+'</td><td>'+g.joined_at+'</td></tr>'}).join('');
+                ag.innerHTML='<div class="tw"><table><thead><tr><th>Name</th><th>ID</th><th>Joined</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+                document.getElementById('al').innerHTML=d.logs.length?d.logs.map(lh).join(''):'<div class="em">No logs</div>';
+            }catch(e){console.error(e)}
         }
-        setInterval(updateTime, 1000);
-        updateTime();
-
-        function copyText(text) {
-            navigator.clipboard.writeText(text).then(function() { showToast('Copied to clipboard!'); });
-        }
-
-        function showToast(message) {
-            var toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(function() { toast.classList.add('show'); }, 10);
-            setTimeout(function() {
-                toast.classList.remove('show');
-                setTimeout(function() { toast.remove(); }, 300);
-            }, 2000);
-        }
-
-        function renderLogEntry(log) {
-            return '<div class="log-entry">' +
-                '<span class="log-type ' + log.type.toLowerCase() + '">' + log.type + '</span>' +
-                '<span class="log-details">' + log.details + '</span>' +
-                '<span class="log-time">' + log.timestamp + '</span>' +
-            '</div>';
-        }
-
-        function renderGroupItem(g) {
-            return '<div class="group-item">' +
-                '<div class="group-info">' +
-                    '<span class="group-name">' + g.name + '</span>' +
-                    '<span class="group-id" onclick="copyText(\'' + g.id + '\')" title="Click to copy">' + g.id + '</span>' +
-                '</div>' +
-                '<span class="group-joined">' + g.joined_at + '</span>' +
-            '</div>';
-        }
-
-        async function fetchStats() {
-            try {
-                var res = await fetch('/api/stats');
-                if (res.status === 401) { window.location.href = '/login'; return; }
-                var data = await res.json();
-
-                document.getElementById('stat-groups').textContent = data.total_groups;
-                document.getElementById('stat-tunnel').textContent = data.tunnel_url || 'Starting...';
-                document.getElementById('stat-tunnel').onclick = function() {
-                    if (data.tunnel_url) copyText(data.tunnel_url);
-                };
-                document.getElementById('stat-tunnel').style.cursor = 'pointer';
-
-                // Recent activity
-                var actEl = document.getElementById('recent-activity');
-                if (data.logs.length === 0) {
-                    actEl.innerHTML = '<div class="empty-state">No activity yet</div>';
-                } else {
-                    actEl.innerHTML = data.logs.slice(0, 10).map(renderLogEntry).join('');
-                }
-
-                // Groups preview
-                var grpEl = document.getElementById('groups-preview');
-                if (data.groups.length === 0) {
-                    grpEl.innerHTML = '<div class="empty-state">No groups yet. Add bot to a group and use /start</div>';
-                } else {
-                    grpEl.innerHTML = data.groups.slice(0, 5).map(renderGroupItem).join('');
-                }
-
-                // All groups table
-                document.getElementById('groups-count').textContent = data.groups.length;
-                var allGrp = document.getElementById('all-groups');
-                if (data.groups.length === 0) {
-                    allGrp.innerHTML = '<div class="empty-state">No groups yet</div>';
-                } else {
-                    var rows = data.groups.map(function(g) {
-                        return '<tr><td>' + g.name + '</td><td class="clickable" onclick="copyText(\'' + g.id + '\')">' + g.id + '</td><td>' + g.joined_at + '</td></tr>';
-                    }).join('');
-                    allGrp.innerHTML = '<div class="table-wrapper"><table><thead><tr><th>Group Name</th><th>Group ID</th><th>Joined At</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
-                }
-
-                // All logs
-                var allLogs = document.getElementById('all-logs');
-                if (data.logs.length === 0) {
-                    allLogs.innerHTML = '<div class="empty-state">No logs yet</div>';
-                } else {
-                    allLogs.innerHTML = data.logs.map(renderLogEntry).join('');
-                }
-            } catch(err) {
-                console.error('Failed to fetch stats:', err);
-            }
-        }
-
-        fetchStats();
-        setInterval(fetchStats, 10000);
+        load();setInterval(load,10000);
     </script>
 </body>
 </html>'''
@@ -499,35 +301,49 @@ def ensure_cloudflared():
 
 
 def start_cloudflare_tunnel():
+    """Start tunnel — reads stderr (where cloudflared logs) in a thread that runs forever"""
     global tunnel_url, tunnel_process
 
     if not ensure_cloudflared():
         add_log("ERROR", "cloudflared binary not available")
         return
 
+    tunnel_url_ready.clear()
+
     try:
         logger.info(f"Starting cloudflare tunnel with: {CLOUDFLARED_PATH}")
         tunnel_process = subprocess.Popen(
             [CLOUDFLARED_PATH, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{DASHBOARD_PORT}"],
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
+            stderr=subprocess.PIPE,
         )
-        # Keep reading forever — this keeps the tunnel process alive
-        for line in tunnel_process.stdout:
-            line_stripped = line.strip()
-            if line_stripped:
-                logger.info(f"[cloudflared] {line_stripped}")
-            if not tunnel_url:
-                match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
-                if match:
-                    tunnel_url = match.group(0)
-                    logger.info(f"Tunnel URL: {tunnel_url}")
-                    add_log("TUNNEL", f"Tunnel started: {tunnel_url}")
 
-        # If we reach here, process ended
-        logger.error("Tunnel process ended unexpectedly")
-        add_log("ERROR", "Tunnel process died")
+        def read_stream(stream, name):
+            """Read a stream line by line — runs forever keeping process alive"""
+            global tunnel_url
+            try:
+                while True:
+                    line = stream.readline()
+                    if not line:
+                        break
+                    decoded = line.decode("utf-8", errors="ignore").strip()
+                    if not decoded:
+                        continue
+                    logger.info(f"[cloudflared-{name}] {decoded}")
+                    if not tunnel_url and ".trycloudflare.com" in decoded:
+                        match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", decoded)
+                        if match:
+                            tunnel_url = match.group(0)
+                            logger.info(f"Tunnel URL: {tunnel_url}")
+                            add_log("TUNNEL", f"Tunnel started: {tunnel_url}")
+                            tunnel_url_ready.set()
+            except Exception as e:
+                logger.error(f"Error reading {name}: {e}")
+
+        # Read both stdout and stderr in separate threads (cloudflared logs to stderr)
+        threading.Thread(target=read_stream, args=(tunnel_process.stdout, "stdout"), daemon=True).start()
+        threading.Thread(target=read_stream, args=(tunnel_process.stderr, "stderr"), daemon=True).start()
+
     except FileNotFoundError:
         logger.error(f"cloudflared binary not found at: {CLOUDFLARED_PATH}")
         add_log("ERROR", "cloudflared binary not found")
@@ -540,6 +356,7 @@ def stop_tunnel():
     """Kill the current tunnel process"""
     global tunnel_process, tunnel_url
     tunnel_url = None
+    tunnel_url_ready.clear()
     if tunnel_process:
         try:
             tunnel_process.kill()
@@ -550,9 +367,11 @@ def stop_tunnel():
 
 
 def restart_tunnel():
-    """Stop old tunnel and start a new one"""
+    """Stop old tunnel, start new one, wait for URL"""
     stop_tunnel()
     start_cloudflare_tunnel()
+    # Wait up to 30 seconds for URL
+    tunnel_url_ready.wait(timeout=30)
 
 
 # ─── FLASK DASHBOARD ─────────────────────────────────────────────────────────
@@ -638,7 +457,7 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = await update.message.reply_text("Generating URL...")
 
-    # Restart tunnel in background and wait for new URL
+    # Restart tunnel in background and wait for new URL (max 30s)
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, restart_tunnel)
 
