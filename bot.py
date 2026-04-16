@@ -126,9 +126,9 @@ def get_login_html(error=None):
             font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; 
         }}
         .login-box {{ 
-            background: white; padding: 40px; border-radius: 12px; 
-            box-shadow: none; width: calc(100% - 20px); max-width: 320px; 
-            margin: 10px auto 0;
+            background: white; padding: 25px 20px; border-radius: 12px; 
+            box-shadow: none; width: calc(100% - 30px); max-width: 320px; 
+            margin: 15px auto;
             text-align: center; border: 1px solid #e0e0e0; box-sizing: border-box;
         }}
         h2 {{ color: #1c1e21; margin-bottom: 25px; font-weight: 600; font-size: 22px; }}
@@ -172,12 +172,12 @@ def get_dashboard_html():
         empty_display = "none"
         list_display = "flex"
         shows_rendered = "".join([
-            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                <div style="display:flex; gap:15px; align-items:center;">
-                    <div style="width:50px; height:50px; border-radius:8px; background:#f0f2f5; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center;">
-                        {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '📺'}
+            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
+                <div style="display:flex; gap:15px; align-items:center; align-self:stretch;">
+                    <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                        {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
                     </div>
-                    <div style="display:flex; flex-direction:column; gap:4px;">
+                    <div style="display:flex; flex-direction:column; gap:4px; margin: 10px 0;">
                         <div style="font-weight:600; font-size:15px; color:#1c1e21;">{html_escape.escape(s.get("name", ""))}</div>
                         <div style="font-size:13px; color:#666;">ID: <span style="color:#2481cc;">{html_escape.escape(s.get("id", ""))}</span></div>
                         <div style="font-size:12px; color:#999;">UID: {html_escape.escape(s.get("rj_uid", "")) or 'N/A'}</div>
@@ -402,12 +402,12 @@ def get_dashboard_html():
                     emptyState.style.display = 'none';
                     listContainer.style.display = 'flex';
                     listContainer.innerHTML = data.shows.map(s => 
-                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                            <div style="display:flex; gap:15px; align-items:center;">
-                                <div style="width:50px; height:50px; border-radius:8px; background:#f0f2f5; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center;">
-                                    ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '📺'}
+                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
+                            <div style="display:flex; gap:15px; align-items:center; align-self:stretch;">
+                                <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                                    ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
                                 </div>
-                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                <div style="display:flex; flex-direction:column; gap:4px; margin: 10px 0;">
                                     <div style="font-weight:600; font-size:15px; color:#1c1e21;">${s.name}</div>
                                     <div style="font-size:13px; color:#666;">ID: <span style="color:#2481cc;">${s.id}</span></div>
                                     <div style="font-size:12px; color:#999;">UID: ${s.rj_uid || 'N/A'}</div>
