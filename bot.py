@@ -508,7 +508,7 @@ def start_cloudflare_tunnel():
     try:
         logger.info(f"Starting cloudflare tunnel with: {CLOUDFLARED_PATH}")
         tunnel_process = subprocess.Popen(
-            [CLOUDFLARED_PATH, "tunnel", "--url", f"http://localhost:{DASHBOARD_PORT}"],
+            [CLOUDFLARED_PATH, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{DASHBOARD_PORT}"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -569,6 +569,11 @@ def restart_tunnel():
 # ─── FLASK DASHBOARD ─────────────────────────────────────────────────────────
 flask_app = Flask(__name__)
 flask_app.secret_key = generate_password(32)
+
+
+@flask_app.route("/health")
+def health():
+    return "OK", 200
 
 
 @flask_app.route("/")
