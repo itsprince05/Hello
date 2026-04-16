@@ -152,7 +152,7 @@ def get_dashboard_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Shows</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { 
@@ -163,7 +163,7 @@ def get_dashboard_html():
         }
         .action-bar { 
             position: relative; z-index: 100; box-sizing: border-box; height: 48px;
-            background: #2481cc; color: white; padding: 0 16px; gap: 10px;
+            background: #2481cc; color: white; padding: 0 10px; gap: 10px;
             display: flex; align-items: center; justify-content: space-between;
             box-shadow: none; 
         }
@@ -172,9 +172,9 @@ def get_dashboard_html():
         .navbar-icon svg { width: 18px; height: 18px; }
         .navbar-title { font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; }
         .logout-btn { 
-            color: white; text-decoration: none; font-weight: 600; font-size: 14px; 
-            background: rgba(255,255,255,0.2); padding: 0 12px; border-radius: 6px; transition: 0.2s; 
-            display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box;
+            color: white; text-decoration: none; 
+            background: rgba(255,255,255,0.2); border-radius: 50%; transition: 0.2s; 
+            display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; box-sizing: border-box;
         }
         .logout-btn:hover { background: rgba(255,255,255,0.3); }
         
@@ -234,8 +234,7 @@ def get_dashboard_html():
             <div class="navbar-title">Bot Dashboard</div>
         </div>
         <a href="/logout" class="logout-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-            Logout
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
         </a>
     </div>
     
@@ -246,34 +245,10 @@ def get_dashboard_html():
 
     <!-- TAB 1: ALL SHOW -->
     <div id="all-show" class="container active">
-        <div class="card">
-            <h3>System Status</h3>
-            <div class="stat-row">
-                <span class="stat-label">Bot Status</span>
-                <span class="stat-val" style="color: #0ca678;">Active & Running</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Tunnel URL</span>
-                <span class="stat-val blue" id="tunnel-url" onclick="copyText(this.textContent)">Loading...</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Active Groups</span>
-                <span class="stat-val" id="groups-count">0</span>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>Active Groups</h3>
-            <div class="item-list" id="groups-list">
-                <div style="text-align:center; color:#999; font-size:13px; padding:20px;">No groups yet</div>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>Recent Logs</h3>
-            <div id="logs-list">
-                <div style="text-align:center; color:#999; font-size:13px; padding:20px;">No activity yet</div>
-            </div>
+        <div class="card" style="text-align:center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 40px; margin-bottom: 15px; color: #aaa;">📦</div>
+            <h4 style="margin:0 0 10px 0; color:#1c1e21; font-weight: 500; font-size: 18px;">Empty List</h4>
+            <p style="font-size: 14px; margin:0; color:#888;">No shows available right now.</p>
         </div>
     </div>
 
@@ -335,18 +310,8 @@ def get_dashboard_html():
                 if(res.status === 401) { window.location.href = '/login'; return; }
                 const data = await res.json();
 
-                document.getElementById('tunnel-url').textContent = data.tunnel_url || 'Waiting for URL...';
-                document.getElementById('groups-count').textContent = data.total_groups;
+                // No DOM DOM updates for Empty List
 
-                const groupsContainer = document.getElementById('groups-list');
-                if(data.groups.length > 0) {
-                    groupsContainer.innerHTML = data.groups.map(renderGroup).join('');
-                }
-
-                const logsContainer = document.getElementById('logs-list');
-                if(data.logs.length > 0) {
-                    logsContainer.innerHTML = data.logs.slice(0, 15).map(renderLog).join('');
-                }
             } catch(e) { console.error(e); }
         }
 
