@@ -615,10 +615,9 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_log("COMMAND", f"/dashboard used in {chat.title} ({chat.id})")
 
     message_text = (
-        f"<b>Dashboard Access</b>\n\n"
-        f"<b>URL:</b> {tunnel_url}\n"
-        f"<b>Password:</b> <code>{dashboard_password}</code>\n\n"
-        f"<i>This URL changes every restart. Password is auto-generated.</i>"
+        f"Password\n"
+        f"<code>{dashboard_password}</code>\n\n"
+        f"{tunnel_url}"
     )
     await update.message.reply_text(message_text, parse_mode="HTML")
 
@@ -631,10 +630,27 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_log("COMMAND", f"/help used in {chat.title} ({chat.id})")
 
     message_text = (
-        "<b>Bot Commands</b>\n\n"
         "/start - Show group name and ID\n"
         "/dashboard - Get dashboard access URL\n"
         "/update - Update bot from repo (admin only)\n"
+        "/list - Show all commands\n"
+        "/help - Show this help message"
+    )
+    await update.message.reply_text(message_text, parse_mode="HTML")
+
+
+async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if not is_allowed(chat.id):
+        return
+
+    add_log("COMMAND", f"/list used in {chat.title} ({chat.id})")
+
+    message_text = (
+        "/start - Show group name and ID\n"
+        "/dashboard - Get dashboard access URL\n"
+        "/update - Update bot from repo (admin only)\n"
+        "/list - Show all commands\n"
         "/help - Show this help message"
     )
     await update.message.reply_text(message_text, parse_mode="HTML")
@@ -698,28 +714,32 @@ def run_flask():
 
 
 async def send_startup_message(bot_app):
-    """Send startup message with dashboard info to the allowed group"""
-    # Wait for tunnel URL to be available
-    for _ in range(20):
-        if tunnel_url:
-            break
-        await asyncio.sleep(1)
-
+    """Send 'Bot is running...' then edit with dashboard info"""
     try:
+        # First send plain message
+        msg = await bot_app.bot.send_message(
+            chat_id=ALLOWED_GROUP_ID,
+            text="Bot is running...",
+        )
+
+        # Wait for tunnel URL
+        for _ in range(30):
+            if tunnel_url:
+                break
+            await asyncio.sleep(1)
+
+        # Edit with dashboard info
         if tunnel_url:
             text = (
                 f"Bot is running...\n\n"
-                f"<b>URL:</b> {tunnel_url}\n"
-                f"<b>Password:</b> <code>{dashboard_password}</code>"
+                f"Password\n"
+                f"<code>{dashboard_password}</code>\n\n"
+                f"{tunnel_url}"
             )
+            await msg.edit_text(text, parse_mode="HTML")
         else:
-            text = f"Bot is running...\n\nTunnel not ready yet. Use /dashboard later."
+            await msg.edit_text("Bot is running...\n\nTunnel not ready yet. Use /dashboard later.")
 
-        await bot_app.bot.send_message(
-            chat_id=ALLOWED_GROUP_ID,
-            text=text,
-            parse_mode="HTML",
-        )
         logger.info("Startup message sent to group.")
     except Exception as e:
         logger.error(f"Failed to send startup message: {e}")
@@ -735,18 +755,16 @@ def main():
     dashboard_password = generate_password(12)
     logger.info(f"Dashboard Password: {dashboard_password}")
 
+    # Start Flask dashboard FIRST so it's ready when tunnel connects
+    logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    time.sleep(1)
+
     # Start Cloudflare tunnel in background
     logger.info("Starting Cloudflare tunnel...")
     tunnel_thread = threading.Thread(target=start_cloudflare_tunnel, daemon=True)
     tunnel_thread.start()
-
-    # Give tunnel time to start
-    time.sleep(5)
-
-    # Start Flask dashboard in background
-    logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
 
     # Build and run the Telegram bot
     logger.info("Starting Telegram bot...")
@@ -756,6 +774,7 @@ def main():
     bot_app.add_handler(CommandHandler("start", start_command))
     bot_app.add_handler(CommandHandler("dashboard", dashboard_command))
     bot_app.add_handler(CommandHandler("help", help_command))
+    bot_app.add_handler(CommandHandler("list", list_command))
     bot_app.add_handler(CommandHandler("update", update_command))
 
     add_log("SYSTEM", "Bot started successfully")
