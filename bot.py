@@ -77,37 +77,66 @@ def add_log(event_type, details):
 
 # ─── HTML BUILDER ─────────────────────────────────────────────────────────────
 def get_login_html(error=None):
-    error_block = ""
-    if error:
-        error_block = f'<div class="err">{error}</div>'
-
+    error_script = f'<script>alert("{error}");</script>' if error else ""
     return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghop Ghop Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Login - Ghop Ghop</title>
+    {error_script}
     <style>
-        *{{margin:0;padding:0;box-sizing:border-box}}
-        body{{font-family:'Inter',sans-serif;background:#17212B;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center}}
-        .card{{background:#232E3C;border-radius:12px;padding:40px 32px;width:100%;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,0.3)}}
-        .card h1{{font-size:20px;font-weight:600;color:#2AABEE;margin-bottom:6px;text-align:center}}
-        .card p{{font-size:13px;color:#8B9BAA;margin-bottom:24px;text-align:center}}
-        input{{width:100%;padding:12px 16px;background:#17212B;border:1px solid #2B3B4A;border-radius:8px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;margin-bottom:16px}}
-        input:focus{{border-color:#2AABEE}}
-        button{{width:100%;padding:12px;background:#2AABEE;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s}}
-        button:hover{{background:#229ED9}}
-        .err{{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;text-align:center}}
+        body {{ 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; padding-top: 56px; box-sizing: border-box; 
+        }}
+        .navbar {{ 
+            position: fixed; top: 0; left: 0; width: 100%; height: 56px; 
+            background-color: #2481cc; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+            display: flex; align-items: center; padding: 0 10px; 
+            z-index: 1000; box-sizing: border-box; 
+        }}
+        .navbar-icon {{
+            width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; border: 2px solid white; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; font-weight: bold; font-size: 20px;
+        }}
+        .navbar-title {{ 
+            font-size: 20px; font-weight: 500; color: white; letter-spacing: 0.15px; 
+        }}
+        .login-box {{ 
+            background: white; padding: 40px; border-radius: 12px; 
+            box-shadow: none; width: calc(100% - 20px); max-width: 320px; 
+            margin: 20px auto 0;
+            text-align: center; border: 1px solid #e0e0e0; box-sizing: border-box;
+        }}
+        h2 {{ color: #1c1e21; margin-bottom: 25px; font-weight: 600; font-size: 22px; }}
+        input {{ 
+            width: 100%; padding: 14px; margin-bottom: 20px; border: 1px solid #ddd; 
+            border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; transition: border 0.2s; 
+        }}
+        input:focus {{ border-color: #2481cc; }}
+        button {{ 
+            width: 100%; padding: 14px; background: #2481cc; color: white; 
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 600; 
+            cursor: pointer; transition: background 0.2s; 
+        }}
+        button:hover {{ background: #1a6fba; }}
+        @media (max-width: 600px) {{
+            .login-box {{ padding: 20px; }}
+        }}
+        input, button {{ font-family: inherit; }}
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>Bot Dashboard</h1>
-        <p>Enter password to continue</p>
-        {error_block}
+    <div class="navbar">
+        <div class="navbar-icon">🤖</div>
+        <div class="navbar-title">Bot Dashboard</div>
+    </div>
+    <div class="login-box">
+        <h2>Welcome Back</h2>
         <form method="POST" action="/login">
-            <input type="password" name="password" placeholder="Password" autocomplete="off" required>
+            <input type="password" name="password" placeholder="Enter Password" autocomplete="off" required>
             <button type="submit">Login</button>
         </form>
     </div>
@@ -121,160 +150,197 @@ def get_dashboard_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bot Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Dashboard - Ghop Ghop</title>
     <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Inter',sans-serif;background:#0E1621;color:#fff;min-height:100vh}
-        ::-webkit-scrollbar{width:5px}
-        ::-webkit-scrollbar-thumb{background:#2B3B4A;border-radius:3px}
-        .app{display:flex;min-height:100vh}
-        .side{width:220px;background:#17212B;border-right:1px solid #232E3C;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
-        .side-top{padding:20px;border-bottom:1px solid #232E3C}
-        .side-top h2{font-size:15px;font-weight:600;color:#2AABEE}
-        .side-top span{font-size:11px;color:#6C7883}
-        .nav{flex:1;padding:8px}
-        .nav a{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;color:#8B9BAA;text-decoration:none;font-size:13px;font-weight:500;margin-bottom:2px;transition:all .15s;cursor:pointer}
-        .nav a:hover{background:#232E3C;color:#fff}
-        .nav a.act{background:#2AABEE;color:#fff}
-        .side-bot{padding:12px;border-top:1px solid #232E3C}
-        .side-bot a{display:block;padding:10px 14px;border-radius:8px;color:#8B9BAA;text-decoration:none;font-size:13px;transition:all .15s}
-        .side-bot a:hover{background:rgba(239,68,68,0.1);color:#f87171}
-        .main{flex:1;margin-left:220px}
-        .hdr{padding:14px 24px;border-bottom:1px solid #232E3C;background:#17212B;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-        .hdr h1{font-size:15px;font-weight:600}
-        .hdr-r{display:flex;align-items:center;gap:12px}
-        .badge{font-size:11px;padding:3px 10px;border-radius:12px;background:rgba(34,197,94,0.1);color:#22C55E;border:1px solid rgba(34,197,94,0.2)}
-        .tm{font-size:12px;color:#6C7883}
-        .mbtn{display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer}
-        .sec{display:none;padding:24px;animation:fi .2s ease}
-        .sec.act{display:block}
-        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
-        .st{background:#17212B;border:1px solid #232E3C;border-radius:10px;padding:18px}
-        .st-l{font-size:11px;color:#6C7883;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-        .st-v{font-size:22px;font-weight:700}
-        .st-v.sm{font-size:12px;font-weight:500;color:#2AABEE;word-break:break-all;cursor:pointer}
-        .grd{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:14px}
-        .cd{background:#17212B;border:1px solid #232E3C;border-radius:10px;overflow:hidden}
-        .cd-h{padding:12px 16px;border-bottom:1px solid #232E3C;display:flex;align-items:center;justify-content:space-between}
-        .cd-h h3{font-size:13px;font-weight:600}
-        .cd-b{padding:12px 16px;max-height:340px;overflow-y:auto}
-        .cnt{background:#2AABEE;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-        .lg{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1E2C3A;font-size:12px}
-        .lg:last-child{border-bottom:none}
-        .lg-t{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0}
-        .lg-t.command{background:rgba(42,171,238,0.12);color:#2AABEE}
-        .lg-t.system{background:rgba(34,197,94,0.12);color:#22C55E}
-        .lg-t.tunnel{background:rgba(139,92,246,0.12);color:#A78BFA}
-        .lg-t.error{background:rgba(239,68,68,0.12);color:#f87171}
-        .lg-d{flex:1;color:#8B9BAA;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .lg-tm{color:#4E5D6B;font-size:11px;flex-shrink:0}
-        .grp{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #1E2C3A}
-        .grp:last-child{border-bottom:none}
-        .grp-n{font-size:13px;font-weight:600}
-        .grp-i{font-size:11px;color:#2AABEE;cursor:pointer;font-family:monospace}
-        .grp-i:hover{color:#fff}
-        .tw{overflow-x:auto}
-        table{width:100%;border-collapse:collapse}
-        th{text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#4E5D6B;font-weight:600;border-bottom:1px solid #232E3C}
-        td{padding:10px 12px;font-size:13px;border-bottom:1px solid #1E2C3A}
-        td.ck{color:#2AABEE;cursor:pointer;font-family:monospace;font-size:12px}
-        td.ck:hover{color:#fff}
-        tr:hover{background:rgba(42,171,238,0.03)}
-        .em{text-align:center;padding:28px;color:#4E5D6B;font-size:13px}
-        .sp{width:24px;height:24px;border:3px solid #232E3C;border-top-color:#2AABEE;border-radius:50%;animation:spin .7s linear infinite;margin:20px auto}
-        .tst{position:fixed;bottom:20px;right:20px;background:#2AABEE;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;transform:translateY(20px);opacity:0;transition:all .3s;z-index:9999}
-        .tst.sh{transform:translateY(0);opacity:1}
-        .rbtn{background:rgba(42,171,238,0.1);border:1px solid rgba(42,171,238,0.2);color:#2AABEE;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500;transition:all .2s}
-        .rbtn:hover{background:rgba(42,171,238,0.2)}
-        @keyframes fi{from{opacity:0}to{opacity:1}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        @media(max-width:768px){
-            .side{transform:translateX(-100%);transition:transform .3s}
-            .side.open{transform:translateX(0)}
-            .main{margin-left:0}
-            .mbtn{display:block}
-            .sec{padding:16px}
-            .stats{grid-template-columns:1fr}
-            .grd{grid-template-columns:1fr}
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; padding: 0; 
+            color: #1c1e21; 
         }
+        .action-bar { 
+            position: relative; z-index: 100; height: 56px; box-sizing: border-box;
+            background: #2481cc; color: white; padding: 0 10px; gap: 10px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: none; 
+        }
+        .nav-left { display: flex; align-items: center; }
+        .navbar-icon { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; border: 2px solid white; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; font-weight: bold; font-size: 20px; }
+        .navbar-title { font-size: 20px; font-weight: 500; color: white; letter-spacing: 0.15px; }
+        .logout-btn { color: white; text-decoration: none; font-weight: 600; font-size: 14px; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; transition: 0.2s; }
+        .logout-btn:hover { background: rgba(255,255,255,0.3); }
+        
+        .tabs { 
+            display: flex; width: 100%; height: 48px; background-color: #2481cc; align-items: center; 
+            position: sticky; top: 0; z-index: 99;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .tab { 
+            flex: 1; height: 100%; display: flex; align-items: center; justify-content: center;
+            font-weight: 500; font-size: 14px; text-transform: none; letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.7); cursor: pointer; 
+            border-bottom: 3px solid transparent; transition: background 0.2s, color 0.2s; 
+        }
+        .tab.active { color: #ffffff; border-bottom-color: #ffffff; background-color: rgba(255, 255, 255, 0.15); }
+        .tab:hover { background-color: rgba(255,255,255,0.1); color: #ffffff; }
+
+        .container { max-width: 800px; margin: 0 auto; padding: 15px; display: none; margin-top: 10px; }
+        .container.active { display: block; }
+
+        .card { 
+            background: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #e0e0e0; 
+            margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .card h3 { margin-top: 0; font-size: 16px; color: #1c1e21; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { font-weight: 500; color: #666; font-size: 14px; }
+        .stat-val { font-weight: 600; color: #1c1e21; font-size: 14px; }
+        .stat-val.blue { color: #2481cc; cursor: pointer; word-break: break-all; }
+
+        .item-list { display: flex; flex-direction: column; gap: 10px; }
+        .item { padding: 12px; border-radius: 8px; background: #f9f9f9; border: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
+        .item-title { font-weight: 600; font-size: 14px; color: #333; }
+        .item-sub { font-size: 12px; color: #777; margin-top: 4px; }
+        .item-action { cursor: pointer; color: #2481cc; font-size: 12px; font-weight: bold; background: #eef5fb; padding: 5px 10px; border-radius: 6px; }
+
+        .log-item { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+        .log-item:last-child { border-bottom: none; }
+        .log-type { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; flex-shrink: 0; text-transform: uppercase; }
+        .log-type.system { background: #e6fcf5; color: #0ca678; }
+        .log-type.tunnel { background: #f3f0ff; color: #845ef7; }
+        .log-type.command { background: #e7f5ff; color: #339af0; }
+        .log-type.error { background: #fff5f5; color: #fa5252; }
+        .log-details { flex: 1; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .log-time { color: #999; font-size: 11px; flex-shrink: 0; }
+
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(50px); background: #333; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 9999; }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     </style>
 </head>
 <body>
-    <div class="app">
-        <aside class="side" id="sb">
-            <div class="side-top"><h2>Bot Dashboard</h2><span>Telegram Bot Panel</span></div>
-            <nav class="nav">
-                <a href="#" class="act" data-s="overview">Overview</a>
-                <a href="#" data-s="groups">Groups</a>
-                <a href="#" data-s="logs">Logs</a>
-            </nav>
-            <div class="side-bot"><a href="/logout">Logout</a></div>
-        </aside>
-        <div class="main">
-            <header class="hdr">
-                <div style="display:flex;align-items:center;gap:12px">
-                    <button class="mbtn" onclick="document.getElementById('sb').classList.toggle('open')">&#9776;</button>
-                    <h1 id="ttl">Overview</h1>
-                </div>
-                <div class="hdr-r"><span class="badge">Online</span><span class="tm" id="clk"></span></div>
-            </header>
-            <div id="s-overview" class="sec act">
-                <div class="stats">
-                    <div class="st"><div class="st-l">Groups</div><div class="st-v" id="sg">0</div></div>
-                    <div class="st"><div class="st-l">Tunnel URL</div><div class="st-v sm" id="su" onclick="cp(this.textContent)">Loading...</div></div>
-                    <div class="st"><div class="st-l">Status</div><div class="st-v" style="color:#22C55E">Active</div></div>
-                </div>
-                <div class="grd">
-                    <div class="cd"><div class="cd-h"><h3>Recent Activity</h3></div><div class="cd-b" id="ra"><div class="sp"></div></div></div>
-                    <div class="cd"><div class="cd-h"><h3>Groups</h3></div><div class="cd-b" id="rg"><div class="sp"></div></div></div>
-                </div>
+    <div class="action-bar">
+        <div class="nav-left">
+            <div class="navbar-icon">🤖</div>
+            <div class="navbar-title">Bot Dashboard</div>
+        </div>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('all-show', event)">All Show</div>
+        <div class="tab" onclick="switchTab('add-show', event)">Add Show</div>
+    </div>
+
+    <!-- TAB 1: ALL SHOW -->
+    <div id="all-show" class="container active">
+        <div class="card">
+            <h3>System Status</h3>
+            <div class="stat-row">
+                <span class="stat-label">Bot Status</span>
+                <span class="stat-val" style="color: #0ca678;">Active & Running</span>
             </div>
-            <div id="s-groups" class="sec">
-                <div class="cd"><div class="cd-h"><h3>All Groups</h3><span class="cnt" id="gc">0</span></div><div class="cd-b" id="ag"><div class="sp"></div></div></div>
+            <div class="stat-row">
+                <span class="stat-label">Tunnel URL</span>
+                <span class="stat-val blue" id="tunnel-url" onclick="copyText(this.textContent)">Loading...</span>
             </div>
-            <div id="s-logs" class="sec">
-                <div class="cd"><div class="cd-h"><h3>Activity Logs</h3><button class="rbtn" onclick="load()">Refresh</button></div><div class="cd-b" id="al"><div class="sp"></div></div></div>
+            <div class="stat-row">
+                <span class="stat-label">Active Groups</span>
+                <span class="stat-val" id="groups-count">0</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Active Groups</h3>
+            <div class="item-list" id="groups-list">
+                <div style="text-align:center; color:#999; font-size:13px; padding:20px;">No groups yet</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Recent Logs</h3>
+            <div id="logs-list">
+                <div style="text-align:center; color:#999; font-size:13px; padding:20px;">No activity yet</div>
             </div>
         </div>
     </div>
-    <div class="tst" id="tst">Copied!</div>
+
+    <!-- TAB 2: ADD SHOW -->
+    <div id="add-show" class="container">
+        <div class="card">
+            <h3>Add Show</h3>
+            <div style="text-align:center; padding: 40px 20px; color: #666;">
+                <div style="font-size: 40px; margin-bottom: 15px;">📺</div>
+                <h4 style="margin:0 0 10px 0; color:#1c1e21;">Add New Shows</h4>
+                <p style="font-size: 14px; line-height: 1.5; margin:0;">
+                    Currently under development. This section will allow you to manually configure or add items without using the Telegram bot interface.
+                </p>
+                <button style="margin-top: 20px; padding: 10px 20px; background: #2481cc; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Coming Soon</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
     <script>
-        document.querySelectorAll('.nav a').forEach(function(a){
-            a.addEventListener('click',function(e){
-                e.preventDefault();
-                var s=a.dataset.s;
-                document.querySelectorAll('.nav a').forEach(function(n){n.classList.remove('act')});
-                a.classList.add('act');
-                document.querySelectorAll('.sec').forEach(function(x){x.classList.remove('act')});
-                document.getElementById('s-'+s).classList.add('act');
-                document.getElementById('ttl').textContent=s.charAt(0).toUpperCase()+s.slice(1);
-                document.getElementById('sb').classList.remove('open');
-            });
-        });
-        function tick(){var d=new Date();document.getElementById('clk').textContent=d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}
-        setInterval(tick,1000);tick();
-        function cp(t){navigator.clipboard.writeText(t);var el=document.getElementById('tst');el.classList.add('sh');setTimeout(function(){el.classList.remove('sh')},1500)}
-        function lh(l){return '<div class="lg"><span class="lg-t '+l.type.toLowerCase()+'">'+l.type+'</span><span class="lg-d">'+l.details+'</span><span class="lg-tm">'+l.timestamp+'</span></div>'}
-        function gh(g){return '<div class="grp"><div><div class="grp-n">'+g.name+'</div><div class="grp-i" onclick="cp(\''+g.id+'\')">'+g.id+'</div></div><span class="grp-d">'+g.joined_at+'</span></div>'}
-        async function load(){
-            try{
-                var r=await fetch('/api/stats');
-                if(r.status===401){window.location.href='/login';return}
-                var d=await r.json();
-                document.getElementById('sg').textContent=d.total_groups;
-                document.getElementById('su').textContent=d.tunnel_url||'Not ready';
-                document.getElementById('ra').innerHTML=d.logs.length?d.logs.slice(0,8).map(lh).join(''):'<div class="em">No activity</div>';
-                document.getElementById('rg').innerHTML=d.groups.length?d.groups.slice(0,5).map(gh).join(''):'<div class="em">No groups</div>';
-                document.getElementById('gc').textContent=d.groups.length;
-                var ag=document.getElementById('ag');
-                if(!d.groups.length){ag.innerHTML='<div class="em">No groups</div>'}
-                else{var rows=d.groups.map(function(g){return '<tr><td>'+g.name+'</td><td class="ck" onclick="cp(\''+g.id+'\')">'+g.id+'</td><td>'+g.joined_at+'</td></tr>'}).join('');
-                ag.innerHTML='<div class="tw"><table><thead><tr><th>Name</th><th>ID</th><th>Joined</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
-                document.getElementById('al').innerHTML=d.logs.length?d.logs.map(lh).join(''):'<div class="em">No logs</div>';
-            }catch(e){console.error(e)}
+        function switchTab(tabId, event) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
         }
-        load();setInterval(load,10000);
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text);
+            const toast = document.getElementById('toast');
+            toast.textContent = "Copied to clipboard!";
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function renderGroup(g) {
+            return `<div class="item">
+                <div>
+                    <div class="item-title">${g.name}</div>
+                    <div class="item-sub">Joined: ${g.joined_at}</div>
+                </div>
+                <div class="item-action" onclick="copyText('${g.id}')">Copy ID</div>
+            </div>`;
+        }
+
+        function renderLog(l) {
+            let typeClass = l.type.toLowerCase();
+            return `<div class="log-item">
+                <span class="log-type ${typeClass}">${l.type}</span>
+                <span class="log-details">${l.details}</span>
+                <span class="log-time">${l.timestamp.split(' ')[1]}</span>
+            </div>`;
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats');
+                if(res.status === 401) { window.location.href = '/login'; return; }
+                const data = await res.json();
+
+                document.getElementById('tunnel-url').textContent = data.tunnel_url || 'Waiting for URL...';
+                document.getElementById('groups-count').textContent = data.total_groups;
+
+                const groupsContainer = document.getElementById('groups-list');
+                if(data.groups.length > 0) {
+                    groupsContainer.innerHTML = data.groups.map(renderGroup).join('');
+                }
+
+                const logsContainer = document.getElementById('logs-list');
+                if(data.logs.length > 0) {
+                    logsContainer.innerHTML = data.logs.slice(0, 15).map(renderLog).join('');
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        loadStats();
+        setInterval(loadStats, 5000);
     </script>
 </body>
 </html>'''
