@@ -9,6 +9,7 @@ import logging
 import platform
 import time
 import threading
+import socket
 from datetime import datetime
 
 from telegram import Update
@@ -23,7 +24,15 @@ from flask import Flask, jsonify, request, redirect, session
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 BOT_TOKEN = "8616525566:AAFF9H7s0iRacpAMzXZXS3ij3mN8ewJBh6o"
-DASHBOARD_PORT = 8080
+
+def get_free_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('127.0.0.1', 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+DASHBOARD_PORT = get_free_port()
 ALLOWED_GROUP_ID = -1003881179060
 
 # Auto-detect OS for cloudflared binary
@@ -544,8 +553,8 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def run_flask():
     try:
         from waitress import serve
-        logger.info(f"Starting waitress server on 0.0.0.0:{DASHBOARD_PORT}")
-        serve(flask_app, host="0.0.0.0", port=DASHBOARD_PORT, threads=4)
+        logger.info(f"Starting waitress server on 127.0.0.1:{DASHBOARD_PORT}")
+        serve(flask_app, host="127.0.0.1", port=DASHBOARD_PORT, threads=4)
     except Exception as e:
         logger.error(f"Server CRASHED: {e}")
 
