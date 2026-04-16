@@ -468,30 +468,68 @@ def get_dashboard_html():
 
 
 # ─── CLOUDFLARE TUNNEL ───────────────────────────────────────────────────────
+CLOUDFLARED_LINUX_URL = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+
+
+def ensure_cloudflared():
+    """Download cloudflared binary if not found (Linux only)"""
+    if os.path.exists(CLOUDFLARED_PATH):
+        # Make sure it's executable on Linux
+        if platform.system() != "Windows":
+            os.chmod(CLOUDFLARED_PATH, 0o755)
+        return True
+
+    if platform.system() == "Windows":
+        logger.error("cloudflared.exe not found. Download from: https://github.com/cloudflare/cloudflared/releases")
+        return False
+
+    # Auto-download on Linux
+    logger.info("cloudflared not found. Downloading...")
+    try:
+        import urllib.request
+        urllib.request.urlretrieve(CLOUDFLARED_LINUX_URL, CLOUDFLARED_PATH)
+        os.chmod(CLOUDFLARED_PATH, 0o755)
+        logger.info("cloudflared downloaded successfully.")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to download cloudflared: {e}")
+        return False
+
+
 def start_cloudflare_tunnel():
     global tunnel_url
+
+    if not ensure_cloudflared():
+        add_log("ERROR", "cloudflared binary not available")
+        return
+
     try:
-        logger.info(f"🔗 Starting cloudflare tunnel with: {CLOUDFLARED_PATH}")
+        logger.info(f"Starting cloudflare tunnel with: {CLOUDFLARED_PATH}")
         process = subprocess.Popen(
             [CLOUDFLARED_PATH, "tunnel", "--url", f"http://localhost:{DASHBOARD_PORT}"],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
         )
-        for line in process.stderr:
-            logger.info(f"[cloudflared] {line.strip()}")
+        for line in process.stdout:
+            line_stripped = line.strip()
+            if line_stripped:
+                logger.info(f"[cloudflared] {line_stripped}")
             match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
             if match:
                 tunnel_url = match.group(0)
-                logger.info(f"✅ Tunnel URL: {tunnel_url}")
-                add_log("TUNNEL", f"Cloudflare tunnel started: {tunnel_url}")
+                logger.info(f"Tunnel URL: {tunnel_url}")
+                add_log("TUNNEL", f"Tunnel started: {tunnel_url}")
                 break
+
+        if not tunnel_url:
+            logger.error("Tunnel process ended without producing a URL")
+            add_log("ERROR", "Tunnel failed to produce URL")
     except FileNotFoundError:
-        logger.error(f"❌ cloudflared binary not found at: {CLOUDFLARED_PATH}")
-        logger.error("Download it from: https://github.com/cloudflare/cloudflared/releases")
+        logger.error(f"cloudflared binary not found at: {CLOUDFLARED_PATH}")
         add_log("ERROR", "cloudflared binary not found")
     except Exception as e:
-        logger.error(f"❌ Failed to start cloudflare tunnel: {e}")
+        logger.error(f"Failed to start cloudflare tunnel: {e}")
         add_log("ERROR", f"Tunnel failed: {e}")
 
 
