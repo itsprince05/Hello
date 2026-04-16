@@ -658,7 +658,7 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             can_change = True
 
         if not is_admin or not can_change:
-            await update.message.reply_text("You don't have permission to use this command.")
+            await update.message.reply_text("You don't have permission to use this command...")
             return
     except Exception as e:
         logger.error(f"Failed to check admin status: {e}")
@@ -667,6 +667,8 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_log("COMMAND", f"/update used by {user.first_name} ({user.id})")
 
+    msg = await update.message.reply_text("Updating bot...")
+
     try:
         result = subprocess.run(
             ["git", "pull"],
@@ -674,20 +676,20 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=True,
             timeout=30,
         )
-        output = result.stdout.strip() or result.stderr.strip() or "No output"
+        output = result.stdout.strip() or result.stderr.strip() or ""
 
         if "Already up to date" in output:
-            await update.message.reply_text("No updates available.")
+            await msg.edit_text("Already up to date...")
         else:
-            await update.message.reply_text("Restarting...")
+            await msg.edit_text("Update complete...")
             add_log("SYSTEM", "Bot restarting after update")
             time.sleep(1)
             os.execv(sys.executable, [sys.executable] + sys.argv)
     except subprocess.TimeoutExpired:
-        await update.message.reply_text("Update timed out.")
+        await msg.edit_text("Update timed out.")
     except Exception as e:
         logger.error(f"Update failed: {e}")
-        await update.message.reply_text(f"Update failed: {e}")
+        await msg.edit_text(f"Update failed...")
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
