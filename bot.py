@@ -616,7 +616,7 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     message_text = (
         f"<b>Dashboard Access</b>\n\n"
-        f"<b>URL:</b> <code>{tunnel_url}</code>\n"
+        f"<b>URL:</b> {tunnel_url}\n"
         f"<b>Password:</b> <code>{dashboard_password}</code>\n\n"
         f"<i>This URL changes every restart. Password is auto-generated.</i>"
     )
@@ -709,7 +709,7 @@ async def send_startup_message(bot_app):
         if tunnel_url:
             text = (
                 f"Bot is running...\n\n"
-                f"<b>URL:</b> <code>{tunnel_url}</code>\n"
+                f"<b>URL:</b> {tunnel_url}\n"
                 f"<b>Password:</b> <code>{dashboard_password}</code>"
             )
         else:
