@@ -313,7 +313,7 @@ def start_cloudflare_tunnel():
     try:
         logger.info(f"Starting cloudflare tunnel with: {CLOUDFLARED_PATH}")
         tunnel_process = subprocess.Popen(
-            [CLOUDFLARED_PATH, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{DASHBOARD_PORT}"],
+            [CLOUDFLARED_PATH, "tunnel", "--url", f"http://127.0.0.1:{DASHBOARD_PORT}"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -542,7 +542,7 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 def run_flask():
-    flask_app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False)
+    flask_app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False, threaded=True)
 
 
 async def send_startup_message(bot_app):
