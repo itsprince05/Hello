@@ -738,12 +738,12 @@ def run_flask():
 
 
 async def send_startup_message(bot_app):
-    """Send 'Bot is running...' then edit with dashboard info"""
+    """Send 'Bot is Running...' then edit with dashboard info"""
     try:
         # First send plain message
         msg = await bot_app.bot.send_message(
             chat_id=ALLOWED_GROUP_ID,
-            text="Bot is running...",
+            text="Bot is Running...",
         )
 
         # Wait for tunnel URL
@@ -762,7 +762,7 @@ async def send_startup_message(bot_app):
             )
             await msg.edit_text(text, parse_mode="HTML")
         else:
-            await msg.edit_text("Bot is running...\n\nTunnel not ready yet. Use /dashboard later.")
+            await msg.edit_text("Bot is Running...\n\nURL not ready yet. Use /dashboard later..")
 
         logger.info("Startup message sent to group.")
     except Exception as e:
@@ -801,7 +801,7 @@ def main():
     bot_app.add_handler(CommandHandler("update", update_command))
 
     add_log("SYSTEM", "Bot started successfully")
-    logger.info("Bot is running.")
+    logger.info("Bot is Running...")
 
     # Send startup message using post_init
     bot_app.post_init = lambda app: send_startup_message(app)
