@@ -642,7 +642,7 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_log("COMMAND", f"/dashboard used in {chat.title} ({chat.id})")
 
-    msg = await update.message.reply_text("Generating new tunnel...")
+    msg = await update.message.reply_text("Generating URL...")
 
     # Restart tunnel in background and wait for new URL
     loop = asyncio.get_event_loop()
@@ -650,13 +650,14 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if tunnel_url:
         message_text = (
+            f"Dashboard URL...\n\n"
             f"Password\n"
             f"<code>{dashboard_password}</code>\n\n"
             f"{tunnel_url}"
         )
         await msg.edit_text(message_text, parse_mode="HTML")
     else:
-        await msg.edit_text("Failed to generate tunnel. Try again.")
+        await msg.edit_text("Generating URL Failed...")
 
 
 async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -701,7 +702,7 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_log("COMMAND", f"/update used by {user.first_name} ({user.id})")
 
-    msg = await update.message.reply_text("Updating bot...")
+    msg = await update.message.reply_text("Updating Bot...")
 
     try:
         result = subprocess.run(
@@ -715,7 +716,7 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if "Already up to date" in output:
             await msg.edit_text("Already up to date...")
         else:
-            await msg.edit_text("Update complete...")
+            await msg.edit_text("Update Complete...")
             add_log("SYSTEM", "Bot restarting after update")
             time.sleep(1)
             os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -749,7 +750,7 @@ async def send_startup_message(bot_app):
         # Edit with dashboard info
         if tunnel_url:
             text = (
-                f"Bot is running...\n\n"
+                f"Bot is Running...\n\n"
                 f"Password\n"
                 f"<code>{dashboard_password}</code>\n\n"
                 f"{tunnel_url}"
