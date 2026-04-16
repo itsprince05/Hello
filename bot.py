@@ -126,15 +126,15 @@ def get_login_html(error=None):
             font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; 
         }}
         .login-box {{ 
-            background: white; padding: 25px 20px; border-radius: 12px; 
-            box-shadow: none; width: calc(100% - 30px); max-width: 320px; 
-            margin: 15px auto;
+            background: white; padding: 25px 20px; border-radius: 10px; 
+            box-shadow: none; width: calc(100% - 20px); max-width: 320px; 
+            margin: 10px auto;
             text-align: center; border: 1px solid #e0e0e0; box-sizing: border-box;
         }}
         h2 {{ color: #1c1e21; margin-bottom: 25px; font-weight: 600; font-size: 22px; }}
         input {{ 
             width: 100%; padding: 14px; margin-bottom: 20px; border: 1px solid #ddd; 
-            border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; transition: border 0.2s; 
+            border-radius: 10px; box-sizing: border-box; font-size: 16px; outline: none; transition: border 0.2s; 
         }}
         input:focus {{ border-color: #2481cc; }}
         button {{ 
@@ -172,8 +172,8 @@ def get_dashboard_html():
         empty_display = "none"
         list_display = "flex"
         shows_rendered = "".join([
-            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
-                <div style="display:flex; gap:15px; align-items:center; align-self:stretch;">
+            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
+                <div style="display:flex; gap:10px; align-items:center; align-self:stretch;">
                     <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                         {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
                     </div>
@@ -236,12 +236,12 @@ def get_dashboard_html():
         .tab.active { color: #ffffff; border-bottom-color: #ffffff; background-color: rgba(255, 255, 255, 0.15); }
         .tab:hover { background-color: rgba(255,255,255,0.1); color: #ffffff; }
 
-        .container { max-width: 800px; margin: 0 auto; padding: 15px; display: none; }
+        .container { max-width: 800px; margin: 0 auto; padding: 10px; display: none; }
         .container.active { display: block; }
 
         .card { 
-            background: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #e0e0e0; 
-            margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            background: #ffffff; border-radius: 10px; padding: 20px; border: 1px solid #e0e0e0; 
+            margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .card h3 { margin-top: 0; font-size: 16px; color: #1c1e21; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         
@@ -303,13 +303,13 @@ def get_dashboard_html():
     <div id="add-show" class="container">
         <div class="card">
             <h3 style="margin-top:0; color:#1c1e21; border-bottom:1px solid #eee; padding-bottom:10px;">Add Show</h3>
-            <div style="display:flex; flex-direction:column; gap: 15px; margin-top: 15px;">
-                <input type="text" id="add-show-name" placeholder="Show Name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-id" placeholder="Show ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-image" placeholder="Show Image URL" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-rj-uid" placeholder="RJ UID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-rj-token" placeholder="RJ Refresh Token" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <button onclick="submitAddShow()" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer;">Add Show</button>
+            <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
+                <input type="text" id="add-show-name" placeholder="Show Name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-id" placeholder="Show ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-image" placeholder="Show Image URL" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-rj-uid" placeholder="RJ UID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-rj-token" placeholder="RJ Refresh Token" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <button onclick="submitAddShow()" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Add Show</button>
             </div>
         </div>
     </div>
@@ -402,8 +402,8 @@ def get_dashboard_html():
                     emptyState.style.display = 'none';
                     listContainer.style.display = 'flex';
                     listContainer.innerHTML = data.shows.map(s => 
-                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
-                            <div style="display:flex; gap:15px; align-items:center; align-self:stretch;">
+                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
+                            <div style="display:flex; gap:10px; align-items:center; align-self:stretch;">
                                 <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                                     ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
                                 </div>
