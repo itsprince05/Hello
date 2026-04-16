@@ -85,10 +85,10 @@ def get_login_html(error=None):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
     {error_script}
-    <link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {{ 
-            font-family: 'PT Serif', serif; 
+            font-family: 'Outfit', sans-serif; 
             background-color: #f0f2f5; 
             margin: 0; padding-top: 60px; box-sizing: border-box; 
         }}
@@ -96,14 +96,15 @@ def get_login_html(error=None):
             position: fixed; top: 0; left: 0; width: 100%; height: 48px;
             background-color: #2481cc; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-            display: flex; align-items: center; padding: 0 12px; 
+            display: flex; align-items: center; padding: 0 16px; 
             z-index: 1000; box-sizing: border-box; 
         }}
         .navbar-icon {{
-            width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; border: 2px solid white; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; font-weight: bold; font-size: 20px;
+            width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc;
         }}
+        .navbar-icon svg {{ width: 18px; height: 18px; }}
         .navbar-title {{ 
-            font-size: 20px; font-weight: 500; color: white; letter-spacing: 0.15px; 
+            font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; 
         }}
         .login-box {{ 
             background: white; padding: 40px; border-radius: 12px; 
@@ -152,27 +153,28 @@ def get_dashboard_html():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { 
-            font-family: 'PT Serif', serif; 
+            font-family: 'Outfit', sans-serif; 
             background-color: #f0f2f5; 
             margin: 0; padding: 0; 
             color: #1c1e21; 
         }
         .action-bar { 
             position: relative; z-index: 100; box-sizing: border-box; height: 48px;
-            background: #2481cc; color: white; padding: 0 12px; gap: 10px;
+            background: #2481cc; color: white; padding: 0 16px; gap: 10px;
             display: flex; align-items: center; justify-content: space-between;
             box-shadow: none; 
         }
         .nav-left { display: flex; align-items: center; }
-        .navbar-icon { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; border: 2px solid white; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; font-weight: bold; font-size: 20px; }
-        .navbar-title { font-size: 20px; font-weight: 500; color: white; letter-spacing: 0.15px; }
+        .navbar-icon { width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; }
+        .navbar-icon svg { width: 18px; height: 18px; }
+        .navbar-title { font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; }
         .logout-btn { 
             color: white; text-decoration: none; font-weight: 600; font-size: 14px; 
-            background: rgba(255,255,255,0.2); padding: 0 16px; border-radius: 6px; transition: 0.2s; 
-            display: flex; align-items: center; gap: 8px; height: 40px; box-sizing: border-box;
+            background: rgba(255,255,255,0.2); padding: 0 12px; border-radius: 6px; transition: 0.2s; 
+            display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box;
         }
         .logout-btn:hover { background: rgba(255,255,255,0.3); }
         
