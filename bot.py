@@ -513,32 +513,21 @@ def start_cloudflare_tunnel():
             stderr=subprocess.STDOUT,
             text=True,
         )
+        # Keep reading forever — this keeps the tunnel process alive
         for line in tunnel_process.stdout:
             line_stripped = line.strip()
             if line_stripped:
                 logger.info(f"[cloudflared] {line_stripped}")
-            match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
-            if match:
-                tunnel_url = match.group(0)
-                logger.info(f"Tunnel URL: {tunnel_url}")
-                add_log("TUNNEL", f"Tunnel started: {tunnel_url}")
-                break
+            if not tunnel_url:
+                match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
+                if match:
+                    tunnel_url = match.group(0)
+                    logger.info(f"Tunnel URL: {tunnel_url}")
+                    add_log("TUNNEL", f"Tunnel started: {tunnel_url}")
 
-        if not tunnel_url:
-            logger.error("Tunnel process ended without producing a URL")
-            add_log("ERROR", "Tunnel failed to produce URL")
-            return
-
-        # Keep reading stdout in background so process doesn't die from buffer overflow
-        def drain_output():
-            try:
-                for line in tunnel_process.stdout:
-                    pass  # Just drain the output
-            except:
-                pass
-
-        threading.Thread(target=drain_output, daemon=True).start()
-
+        # If we reach here, process ended
+        logger.error("Tunnel process ended unexpectedly")
+        add_log("ERROR", "Tunnel process died")
     except FileNotFoundError:
         logger.error(f"cloudflared binary not found at: {CLOUDFLARED_PATH}")
         add_log("ERROR", "cloudflared binary not found")
