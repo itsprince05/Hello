@@ -15,11 +15,9 @@ from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
-    MessageHandler,
-    filters,
     ContextTypes,
 )
-from flask import Flask, jsonify, request, redirect, session
+from aiohttp import web
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 BOT_TOKEN = "8616525566:AAFF9H7s0iRacpAMzXZXS3ij3mN8ewJBh6o"
@@ -42,8 +40,7 @@ logger = logging.getLogger(__name__)
 # ─── GLOBALS ──────────────────────────────────────────────────────────────────
 tunnel_url = None
 dashboard_password = None
-tunnel_process = None
-tunnel_url_ready = threading.Event()
+TUNNEL_PROCESS = None
 active_groups = {}
 activity_logs = []
 MAX_LOGS = 200
@@ -66,7 +63,7 @@ def add_log(event_type, details):
         activity_logs.pop()
 
 
-# ─── HTML BUILDER ─────────────────────────────────────────────────────────────
+# ─── HTML ─────────────────────────────────────────────────────────────────────
 def get_login_html(error=None):
     error_block = ""
     if error:
@@ -271,23 +268,21 @@ def get_dashboard_html():
 </html>'''
 
 
-# ─── CLOUDFLARE TUNNEL ───────────────────────────────────────────────────────
+# ─── CLOUDFLARE TUNNEL (same as GhostCatcher) ────────────────────────────────
 CLOUDFLARED_LINUX_URL = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
 
 
 def ensure_cloudflared():
     """Download cloudflared binary if not found (Linux only)"""
     if os.path.exists(CLOUDFLARED_PATH):
-        # Make sure it's executable on Linux
         if platform.system() != "Windows":
             os.chmod(CLOUDFLARED_PATH, 0o755)
         return True
 
     if platform.system() == "Windows":
-        logger.error("cloudflared.exe not found. Download from: https://github.com/cloudflare/cloudflared/releases")
+        logger.error("cloudflared.exe not found.")
         return False
 
-    # Auto-download on Linux
     logger.info("cloudflared not found. Downloading...")
     try:
         import urllib.request
@@ -300,119 +295,98 @@ def ensure_cloudflared():
         return False
 
 
-def start_cloudflare_tunnel():
-    """Start tunnel — reads stderr (where cloudflared logs) in a thread that runs forever"""
-    global tunnel_url, tunnel_process
+async def start_cloudflared_tunnel():
+    """Start cloudflare tunnel — exact same pattern as GhostCatcher"""
+    global TUNNEL_PROCESS, tunnel_url
+
+    # Kill existing tunnel if any
+    if TUNNEL_PROCESS:
+        try:
+            logger.info("Stopping existing tunnel...")
+            TUNNEL_PROCESS.terminate()
+            await asyncio.sleep(1)
+        except Exception as e:
+            logger.error(f"Failed to stop tunnel: {e}")
 
     if not ensure_cloudflared():
         add_log("ERROR", "cloudflared binary not available")
         return
 
-    tunnel_url_ready.clear()
+    tunnel_url = None
 
     try:
-        logger.info(f"Starting cloudflare tunnel with: {CLOUDFLARED_PATH}")
-        tunnel_process = subprocess.Popen(
-            [CLOUDFLARED_PATH, "tunnel", "--url", f"http://127.0.0.1:{DASHBOARD_PORT}"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        process = await asyncio.create_subprocess_exec(
+            CLOUDFLARED_PATH, 'tunnel', '--url', f'http://127.0.0.1:{DASHBOARD_PORT}',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
+        TUNNEL_PROCESS = process
+        logger.info("Cloudflared process started")
 
-        def read_stream(stream, name):
-            """Read a stream line by line — runs forever keeping process alive"""
+        state = {'url_sent': False}
+
+        async def check_stream(stream, stream_name):
             global tunnel_url
-            try:
-                while True:
-                    line = stream.readline()
-                    if not line:
-                        break
-                    decoded = line.decode("utf-8", errors="ignore").strip()
-                    if not decoded:
-                        continue
-                    logger.info(f"[cloudflared-{name}] {decoded}")
-                    if not tunnel_url and ".trycloudflare.com" in decoded:
-                        match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", decoded)
-                        if match:
-                            tunnel_url = match.group(0)
-                            logger.info(f"Tunnel URL: {tunnel_url}")
-                            add_log("TUNNEL", f"Tunnel started: {tunnel_url}")
-                            tunnel_url_ready.set()
-            except Exception as e:
-                logger.error(f"Error reading {name}: {e}")
+            while True:
+                line = await stream.readline()
+                if not line:
+                    break
+                decoded_line = line.decode('utf-8', errors='ignore').strip()
+                if not decoded_line:
+                    continue
+                logger.info(f"CLOUDFLARED: {decoded_line}")
 
-        # Read both stdout and stderr in separate threads (cloudflared logs to stderr)
-        threading.Thread(target=read_stream, args=(tunnel_process.stdout, "stdout"), daemon=True).start()
-        threading.Thread(target=read_stream, args=(tunnel_process.stderr, "stderr"), daemon=True).start()
+                if not state['url_sent'] and '.trycloudflare.com' in decoded_line:
+                    match = re.search(r'https://[a-zA-Z0-9-]+\.trycloudflare\.com', decoded_line)
+                    if match:
+                        tunnel_url = match.group(0)
+                        logger.info(f"Tunnel URL: {tunnel_url}")
+                        add_log("TUNNEL", f"Tunnel started: {tunnel_url}")
+                        state['url_sent'] = True
 
-    except FileNotFoundError:
-        logger.error(f"cloudflared binary not found at: {CLOUDFLARED_PATH}")
-        add_log("ERROR", "cloudflared binary not found")
+        asyncio.create_task(check_stream(process.stderr, "STDERR"))
+        asyncio.create_task(check_stream(process.stdout, "STDOUT"))
+        return process
     except Exception as e:
-        logger.error(f"Failed to start cloudflare tunnel: {e}")
+        logger.error(f"Error starting cloudflared: {e}")
         add_log("ERROR", f"Tunnel failed: {e}")
 
 
-def stop_tunnel():
-    """Kill the current tunnel process"""
-    global tunnel_process, tunnel_url
-    tunnel_url = None
-    tunnel_url_ready.clear()
-    if tunnel_process:
-        try:
-            tunnel_process.kill()
-            tunnel_process.wait(timeout=5)
-        except:
-            pass
-        tunnel_process = None
+# ─── AIOHTTP WEB SERVER (same as GhostCatcher) ──────────────────────────────
+async def handle_health(request):
+    return web.Response(text="OK")
 
 
-def restart_tunnel():
-    """Stop old tunnel, start new one, wait for URL"""
-    stop_tunnel()
-    start_cloudflare_tunnel()
-    # Wait up to 30 seconds for URL
-    tunnel_url_ready.wait(timeout=30)
+async def handle_index(request):
+    if request.cookies.get('auth') != 'true':
+        raise web.HTTPFound('/login')
+    return web.Response(text=get_dashboard_html(), content_type='text/html')
 
 
-# ─── FLASK DASHBOARD ─────────────────────────────────────────────────────────
-flask_app = Flask(__name__)
-flask_app.secret_key = generate_password(32)
+async def handle_login_page(request):
+    return web.Response(text=get_login_html(), content_type='text/html')
 
 
-@flask_app.route("/health")
-def health():
-    return "OK", 200
+async def handle_login_post(request):
+    data = await request.post()
+    pwd = data.get('password', '')
+    if pwd == dashboard_password:
+        resp = web.HTTPFound('/')
+        resp.set_cookie('auth', 'true', max_age=18000)
+        return resp
+    return web.Response(text=get_login_html(error="Incorrect Password"), content_type='text/html')
 
 
-@flask_app.route("/")
-def index():
-    if not session.get("authenticated"):
-        return redirect("/login")
-    return get_dashboard_html()
+async def handle_logout(request):
+    resp = web.HTTPFound('/login')
+    resp.del_cookie('auth')
+    return resp
 
 
-@flask_app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        pwd = request.form.get("password", "")
-        if pwd == dashboard_password:
-            session["authenticated"] = True
-            return redirect("/")
-        return get_login_html(error="Incorrect Password")
-    return get_login_html()
-
-
-@flask_app.route("/logout")
-def logout():
-    session.pop("authenticated", None)
-    return redirect("/login")
-
-
-@flask_app.route("/api/stats")
-def api_stats():
-    if not session.get("authenticated"):
-        return jsonify({"error": "unauthorized"}), 401
-    return jsonify({
+async def handle_api_stats(request):
+    if request.cookies.get('auth') != 'true':
+        return web.json_response({"error": "unauthorized"}, status=401)
+    return web.json_response({
         "total_groups": len(active_groups),
         "tunnel_url": tunnel_url,
         "groups": list(active_groups.values()),
@@ -420,16 +394,33 @@ def api_stats():
     })
 
 
+async def start_web_server():
+    """Start aiohttp web server — same approach as GhostCatcher"""
+    app = web.Application()
+    app.router.add_get('/health', handle_health)
+    app.router.add_get('/', handle_index)
+    app.router.add_get('/login', handle_login_page)
+    app.router.add_post('/login', handle_login_post)
+    app.router.add_get('/logout', handle_logout)
+    app.router.add_get('/api/stats', handle_api_stats)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', DASHBOARD_PORT)
+    await site.start()
+    logger.info(f"Web server started on http://0.0.0.0:{DASHBOARD_PORT}")
+    return site
+
+
 # ─── BOT HANDLERS ────────────────────────────────────────────────────────────
 def is_allowed(chat_id):
-    """Check if the chat is the allowed group"""
     return chat_id == ALLOWED_GROUP_ID
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     if not is_allowed(chat.id):
-        return  # No response — bot appears dead
+        return
 
     group_name = chat.title or "Unknown Group"
     group_id = str(chat.id)
@@ -457,9 +448,14 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = await update.message.reply_text("Generating URL...")
 
-    # Restart tunnel in background and wait for new URL (max 30s)
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, restart_tunnel)
+    # Restart tunnel
+    await start_cloudflared_tunnel()
+
+    # Wait for URL
+    for _ in range(30):
+        if tunnel_url:
+            break
+        await asyncio.sleep(1)
 
     if tunnel_url:
         message_text = (
@@ -495,7 +491,6 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = update.effective_user
 
-    # Check if user is admin with can_change_info permission
     try:
         member = await chat.get_member(user.id)
         is_admin = member.status in ["creator", "administrator"]
@@ -531,41 +526,41 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await msg.edit_text("Update Complete...")
             add_log("SYSTEM", "Bot restarting after update")
-            time.sleep(1)
+            await asyncio.sleep(1)
             os.execv(sys.executable, [sys.executable] + sys.argv)
     except subprocess.TimeoutExpired:
         await msg.edit_text("Update timed out.")
     except Exception as e:
         logger.error(f"Update failed: {e}")
-        await msg.edit_text(f"Update failed...")
+        await msg.edit_text("Update failed...")
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
-def run_flask():
-    try:
-        from waitress import serve
-        logger.info(f"Starting waitress server on 0.0.0.0:{DASHBOARD_PORT}")
-        serve(flask_app, host="0.0.0.0", port=DASHBOARD_PORT, threads=4)
-    except Exception as e:
-        logger.error(f"Server CRASHED: {e}")
+async def post_init(app):
+    """Runs after bot starts — start web server, tunnel, send startup msg"""
+    global dashboard_password
+    dashboard_password = generate_password(12)
+    logger.info(f"Dashboard Password: {dashboard_password}")
 
+    # Start aiohttp web server
+    await start_web_server()
 
-async def send_startup_message(bot_app):
-    """Send 'Bot is Running...' then edit with dashboard info"""
+    # Start cloudflare tunnel
+    await start_cloudflared_tunnel()
+
+    # Wait for tunnel URL
+    for _ in range(30):
+        if tunnel_url:
+            break
+        await asyncio.sleep(1)
+
+    # Send startup message
     try:
-        # First send plain message
-        msg = await bot_app.bot.send_message(
+        msg = await app.bot.send_message(
             chat_id=ALLOWED_GROUP_ID,
             text="Bot is Running...",
         )
 
-        # Wait for tunnel URL
-        for _ in range(30):
-            if tunnel_url:
-                break
-            await asyncio.sleep(1)
-
-        # Edit with dashboard info
         if tunnel_url:
             text = (
                 f"Bot is Running...\n\n"
@@ -583,39 +578,12 @@ async def send_startup_message(bot_app):
 
 
 def main():
-    global dashboard_password
-
     print("=" * 50)
     print("TELEGRAM BOT + DASHBOARD STARTING")
     print("=" * 50)
 
-    dashboard_password = generate_password(12)
-    logger.info(f"Dashboard Password: {dashboard_password}")
-
-    # Start Flask dashboard FIRST so it's ready when tunnel connects
-    logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    time.sleep(3)
-
-    # Verify Flask is running
-    import urllib.request
-    try:
-        resp = urllib.request.urlopen(f"http://127.0.0.1:{DASHBOARD_PORT}/health", timeout=5)
-        logger.info(f"Flask health check: {resp.read().decode()}")
-    except Exception as e:
-        logger.error(f"Flask NOT responding on port {DASHBOARD_PORT}: {e}")
-
-    # Start Cloudflare tunnel in background
-    logger.info("Starting Cloudflare tunnel...")
-    tunnel_thread = threading.Thread(target=start_cloudflare_tunnel, daemon=True)
-    tunnel_thread.start()
-
-    # Build and run the Telegram bot
-    logger.info("Starting Telegram bot...")
     bot_app = Application.builder().token(BOT_TOKEN).build()
 
-    # Command handlers
     bot_app.add_handler(CommandHandler("start", start_command))
     bot_app.add_handler(CommandHandler("dashboard", dashboard_command))
     bot_app.add_handler(CommandHandler("list", list_command))
@@ -624,8 +592,7 @@ def main():
     add_log("SYSTEM", "Bot started successfully")
     logger.info("Bot is Running...")
 
-    # Send startup message using post_init
-    bot_app.post_init = lambda app: send_startup_message(app)
+    bot_app.post_init = post_init
 
     bot_app.run_polling(drop_pending_updates=True)
 
