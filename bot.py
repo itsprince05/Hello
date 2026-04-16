@@ -21,7 +21,7 @@ from aiohttp import web
 
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 BOT_TOKEN = "8616525566:AAFF9H7s0iRacpAMzXZXS3ij3mN8ewJBh6o"
-DASHBOARD_PORT = 8080
+DASHBOARD_PORT = 5050
 ALLOWED_GROUP_ID = -1003881179060
 
 # Auto-detect OS for cloudflared binary
@@ -537,29 +537,30 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 async def post_init(app):
-    """Runs after bot starts — start web server, tunnel, send startup msg"""
-    global dashboard_password
-    dashboard_password = generate_password(12)
-    logger.info(f"Dashboard Password: {dashboard_password}")
-
+    """Runs after bot starts — start web server + tunnel, send msg in background"""
     # Start aiohttp web server
     await start_web_server()
 
     # Start cloudflare tunnel
     await start_cloudflared_tunnel()
 
-    # Wait for tunnel URL
-    for _ in range(30):
-        if tunnel_url:
-            break
-        await asyncio.sleep(1)
+    # Send startup message in background (don't block bot from polling)
+    asyncio.create_task(send_startup_message(app))
 
-    # Send startup message
+
+async def send_startup_message(app):
+    """Background task — waits for tunnel URL, sends message"""
     try:
         msg = await app.bot.send_message(
             chat_id=ALLOWED_GROUP_ID,
             text="Bot is Running...",
         )
+
+        # Wait for tunnel URL (up to 30s)
+        for _ in range(30):
+            if tunnel_url:
+                break
+            await asyncio.sleep(1)
 
         if tunnel_url:
             text = (
@@ -578,9 +579,14 @@ async def post_init(app):
 
 
 def main():
+    global dashboard_password
+
     print("=" * 50)
     print("TELEGRAM BOT + DASHBOARD STARTING")
     print("=" * 50)
+
+    dashboard_password = generate_password(12)
+    logger.info(f"Dashboard Password: {dashboard_password}")
 
     bot_app = Application.builder().token(BOT_TOKEN).build()
 
@@ -599,3 +605,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
