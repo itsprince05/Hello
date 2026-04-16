@@ -57,6 +57,25 @@ active_groups = {}
 activity_logs = []
 MAX_LOGS = 200
 
+SHOWS_FILE = "shows.json"
+
+def load_shows():
+    import os, json
+    if os.path.exists(SHOWS_FILE):
+        with open(SHOWS_FILE, 'r') as f:
+            try:
+                return json.load(f)
+            except:
+                return []
+    return []
+
+def save_shows(data):
+    import json
+    with open(SHOWS_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+shows_list = load_shows()
+
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 def generate_password(length=12):
@@ -96,7 +115,7 @@ def get_login_html(error=None):
             position: fixed; top: 0; left: 0; width: 100%; height: 48px;
             background-color: #2481cc; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-            display: flex; align-items: center; padding: 0 16px; 
+            display: flex; align-items: center; padding: 0 10px; 
             z-index: 1000; box-sizing: border-box; 
         }}
         .navbar-icon {{
@@ -245,24 +264,27 @@ def get_dashboard_html():
 
     <!-- TAB 1: ALL SHOW -->
     <div id="all-show" class="container active">
-        <div class="card" style="text-align:center; padding: 60px 20px; color: #666;">
-            <div style="font-size: 40px; margin-bottom: 15px; color: #aaa;">📦</div>
+        <div class="card" id="empty-state" style="text-align:center; padding: 60px 20px; color: #666;">
+            <div style="margin-bottom: 15px; color: #aaa;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brush-cleaning-icon lucide-brush-cleaning"><path d="m16 22-1-4"/><path d="M19 14a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1"/><path d="M19 14H5l-1.973 6.767A1 1 0 0 0 4 22h16a1 1 0 0 0 .973-1.233z"/><path d="m8 22 1-4"/></svg>
+            </div>
             <h4 style="margin:0 0 10px 0; color:#1c1e21; font-weight: 500; font-size: 18px;">Empty List</h4>
             <p style="font-size: 14px; margin:0; color:#888;">No shows available right now.</p>
         </div>
+        <div id="shows-list" style="display:flex; flex-direction:column; gap:10px; display:none;"></div>
     </div>
 
     <!-- TAB 2: ADD SHOW -->
     <div id="add-show" class="container">
         <div class="card">
-            <h3>Add Show</h3>
-            <div style="text-align:center; padding: 40px 20px; color: #666;">
-                <div style="font-size: 40px; margin-bottom: 15px;">📺</div>
-                <h4 style="margin:0 0 10px 0; color:#1c1e21;">Add New Shows</h4>
-                <p style="font-size: 14px; line-height: 1.5; margin:0;">
-                    Currently under development. This section will allow you to manually configure or add items without using the Telegram bot interface.
-                </p>
-                <button style="margin-top: 20px; padding: 10px 20px; background: #2481cc; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Coming Soon</button>
+            <h3 style="margin-top:0; color:#1c1e21; border-bottom:1px solid #eee; padding-bottom:10px;">Add Show</h3>
+            <div style="display:flex; flex-direction:column; gap: 15px; margin-top: 15px;">
+                <input type="text" id="add-show-name" placeholder="Show Name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-id" placeholder="Show ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-image" placeholder="Show Image URL" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-rj-uid" placeholder="RJ UID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="text" id="add-show-rj-token" placeholder="RJ Refresh Token" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <button onclick="submitAddShow()" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer;">Add Show</button>
             </div>
         </div>
     </div>
@@ -315,7 +337,68 @@ def get_dashboard_html():
             } catch(e) { console.error(e); }
         }
 
+        async function submitAddShow() {
+            const data = {
+                name: document.getElementById('add-show-name').value,
+                id: document.getElementById('add-show-id').value,
+                image: document.getElementById('add-show-image').value,
+                rj_uid: document.getElementById('add-show-rj-uid').value,
+                rj_token: document.getElementById('add-show-rj-token').value
+            };
+            if(!data.name || !data.id) return alert("Show Name and Show ID are required!");
+
+            try {
+                const res = await fetch('/api/shows', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if(res.ok) {
+                    ['name', 'id', 'image', 'rj-uid', 'rj-token'].forEach(f => document.getElementById(`add-show-${f}`).value = '');
+                    alert("Show added successfully!");
+                    loadShows();
+                    document.querySelectorAll('.tab')[0].click();
+                } else {
+                    alert("Failed to add show.");
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadShows() {
+            try {
+                const res = await fetch('/api/shows');
+                if(res.status === 401) { window.location.href = '/login'; return; }
+                const data = await res.json();
+                
+                const listContainer = document.getElementById('shows-list');
+                const emptyState = document.getElementById('empty-state');
+                
+                if(data.shows && data.shows.length > 0) {
+                    emptyState.style.display = 'none';
+                    listContainer.style.display = 'flex';
+                    listContainer.innerHTML = data.shows.map(s => 
+                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:15px; border-radius:12px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                            <div style="display:flex; gap:15px; align-items:center;">
+                                <div style="width:50px; height:50px; border-radius:8px; background:#f0f2f5; flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                                    ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '📺'}
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <div style="font-weight:600; font-size:15px; color:#1c1e21;">${s.name}</div>
+                                    <div style="font-size:13px; color:#666;">ID: <span style="color:#2481cc;">${s.id}</span></div>
+                                    <div style="font-size:12px; color:#999;">UID: ${s.rj_uid || 'N/A'}</div>
+                                </div>
+                            </div>
+                        </div>`
+                    ).join('');
+                } else {
+                    emptyState.style.display = 'block';
+                    listContainer.style.display = 'none';
+                }
+            } catch(e) { console.error(e); }
+        }
+
         loadStats();
+        loadShows();
         setInterval(loadStats, 5000);
     </script>
 </body>
@@ -469,6 +552,20 @@ def api_stats():
         "groups": list(active_groups.values()),
         "logs": activity_logs[:50],
     })
+
+
+@flask_app.route("/api/shows", methods=["GET", "POST"])
+def api_shows():
+    if not session.get("authenticated"):
+        return jsonify({"error": "unauthorized"}), 401
+    
+    if request.method == "POST":
+        data = request.json
+        shows_list.append(data)
+        save_shows(shows_list)
+        return jsonify({"status": "success"})
+        
+    return jsonify({"shows": shows_list})
 
 
 # ─── BOT HANDLERS ────────────────────────────────────────────────────────────
