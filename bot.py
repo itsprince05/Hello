@@ -83,19 +83,20 @@ def get_login_html(error=None):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Ghop Ghop</title>
+    <title>Login</title>
     {error_script}
+    <link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: 'PT Serif', serif; 
             background-color: #f0f2f5; 
-            margin: 0; padding-top: 56px; box-sizing: border-box; 
+            margin: 0; padding-top: 68px; box-sizing: border-box; 
         }}
         .navbar {{ 
-            position: fixed; top: 0; left: 0; width: 100%; height: 56px; 
+            position: fixed; top: 0; left: 0; width: 100%; 
             background-color: #2481cc; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-            display: flex; align-items: center; padding: 0 10px; 
+            display: flex; align-items: center; padding: 12px; 
             z-index: 1000; box-sizing: border-box; 
         }}
         .navbar-icon {{
@@ -130,7 +131,7 @@ def get_login_html(error=None):
 </head>
 <body>
     <div class="navbar">
-        <div class="navbar-icon">🤖</div>
+        <div class="navbar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music4-icon lucide-music-4"><path d="M9 18V5l12-2v13"/><path d="m9 9 12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
         <div class="navbar-title">Bot Dashboard</div>
     </div>
     <div class="login-box">
@@ -150,17 +151,18 @@ def get_dashboard_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Ghop Ghop</title>
+    <title>Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: 'PT Serif', serif; 
             background-color: #f0f2f5; 
             margin: 0; padding: 0; 
             color: #1c1e21; 
         }
         .action-bar { 
-            position: relative; z-index: 100; height: 56px; box-sizing: border-box;
-            background: #2481cc; color: white; padding: 0 10px; gap: 10px;
+            position: relative; z-index: 100; box-sizing: border-box;
+            background: #2481cc; color: white; padding: 12px; gap: 10px;
             display: flex; align-items: center; justify-content: space-between;
             box-shadow: none; 
         }
@@ -222,7 +224,7 @@ def get_dashboard_html():
 <body>
     <div class="action-bar">
         <div class="nav-left">
-            <div class="navbar-icon">🤖</div>
+            <div class="navbar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music4-icon lucide-music-4"><path d="M9 18V5l12-2v13"/><path d="m9 9 12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
             <div class="navbar-title">Bot Dashboard</div>
         </div>
         <a href="/logout" class="logout-btn">Logout</a>
