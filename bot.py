@@ -50,7 +50,6 @@ logger = logging.getLogger(__name__)
 
 # ─── GLOBALS ──────────────────────────────────────────────────────────────────
 tunnel_url = None
-dashboard_password = None
 tunnel_process = None
 tunnel_url_ready = threading.Event()
 active_groups = {}
@@ -95,81 +94,6 @@ def add_log(event_type, details):
 
 
 # ─── HTML BUILDER ─────────────────────────────────────────────────────────────
-def get_login_html(error=None):
-    error_script = f'<script>alert("{error}");</script>' if error else ""
-    return f'''<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    {error_script}
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {{ 
-            font-family: 'Outfit', sans-serif; 
-            background-color: #f0f2f5; 
-            margin: 0; padding-top: 48px; box-sizing: border-box; 
-        }}
-        .navbar {{ 
-            position: fixed; top: 0; left: 0; width: 100%; height: 48px;
-            background-color: #2481cc; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-            display: flex; align-items: center; padding: 0 10px; 
-            z-index: 1000; box-sizing: border-box; 
-        }}
-        .navbar-icon {{
-            width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc;
-        }}
-        .navbar-icon svg {{ width: 18px; height: 18px; }}
-        .navbar-title {{ 
-            font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; 
-        }}
-        .container {{ 
-            max-width: 800px; margin: 0 auto; padding: 10px; box-sizing: border-box; 
-        }}
-        .login-box {{ 
-            background: white; padding: 25px 20px; border-radius: 10px; 
-            box-shadow: none; width: 100%; max-width: 320px; 
-            margin: 0 auto;
-            text-align: center; border: 1px solid #e0e0e0; box-sizing: border-box;
-        }}
-        h2 {{ color: #1c1e21; margin-bottom: 25px; font-weight: 600; font-size: 22px; }}
-        input {{ 
-            width: 100%; padding: 14px; margin-bottom: 20px; border: 1px solid #ddd; 
-            border-radius: 10px; box-sizing: border-box; font-size: 16px; outline: none; transition: border 0.2s; 
-        }}
-        input:focus {{ border-color: #2481cc; }}
-        button {{ 
-            width: 100%; padding: 14px; background: #2481cc; color: white; 
-            border: none; border-radius: 10px; font-size: 16px; font-weight: 600; 
-            cursor: pointer; transition: background 0.2s; 
-        }}
-        button:hover {{ background: #1a6fba; }}
-        @media (max-width: 600px) {{
-            .login-box {{ padding: 20px; }}
-        }}
-        input, button {{ font-family: inherit; }}
-    </style>
-</head>
-<body>
-    <div class="navbar">
-        <div class="navbar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music4-icon lucide-music-4"><path d="M9 18V5l12-2v13"/><path d="m9 9 12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-        <div class="navbar-title">Bot Dashboard</div>
-    </div>
-    <div class="container">
-        <div class="login-box">
-            <h2>Welcome Back</h2>
-            <form method="POST" action="/login">
-                <input type="password" name="password" placeholder="Enter Password" autocomplete="off" required>
-                <button type="submit">Login</button>
-            </form>
-        </div>
-    </div>
-</body>
-</html>'''
-
-
 def get_dashboard_html():
     import html as html_escape
     global shows_list
@@ -220,12 +144,6 @@ def get_dashboard_html():
         .navbar-icon { width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; }
         .navbar-icon svg { width: 18px; height: 18px; }
         .navbar-title { font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; }
-        .logout-btn { 
-            color: white; text-decoration: none; 
-            background: rgba(255,255,255,0.2); border-radius: 50%; transition: 0.2s; 
-            display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; box-sizing: border-box;
-        }
-        .logout-btn:hover { background: rgba(255,255,255,0.3); }
         
         .tabs { 
             display: flex; width: 100%; height: 48px; background-color: #2481cc; align-items: center; 
@@ -282,9 +200,6 @@ def get_dashboard_html():
             <div class="navbar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music4-icon lucide-music-4"><path d="M9 18V5l12-2v13"/><path d="m9 9 12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
             <div class="navbar-title">Bot Dashboard</div>
         </div>
-        <a href="/logout" class="logout-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-        </a>
     </div>
     
     <div class="tabs">
@@ -359,7 +274,6 @@ def get_dashboard_html():
         async function loadStats() {
             try {
                 const res = await fetch('/api/stats');
-                if(res.status === 401) { window.location.href = '/login'; return; }
                 const data = await res.json();
 
                 // No DOM DOM updates for Empty List
@@ -397,7 +311,6 @@ def get_dashboard_html():
         async function loadShows() {
             try {
                 const res = await fetch('/api/shows');
-                if(res.status === 401) { window.location.href = '/login'; return; }
                 const data = await res.json();
                 
                 const listContainer = document.getElementById('shows-list');
@@ -552,32 +465,11 @@ def health():
 
 @flask_app.route("/")
 def index():
-    if not session.get("authenticated"):
-        return redirect("/login")
     return get_dashboard_html()
-
-
-@flask_app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        pwd = request.form.get("password", "")
-        if pwd == dashboard_password:
-            session["authenticated"] = True
-            return redirect("/")
-        return get_login_html(error="Incorrect Password")
-    return get_login_html()
-
-
-@flask_app.route("/logout")
-def logout():
-    session.pop("authenticated", None)
-    return redirect("/login")
 
 
 @flask_app.route("/api/stats")
 def api_stats():
-    if not session.get("authenticated"):
-        return jsonify({"error": "unauthorized"}), 401
     return jsonify({
         "total_groups": len(active_groups),
         "tunnel_url": tunnel_url,
@@ -588,9 +480,6 @@ def api_stats():
 
 @flask_app.route("/api/shows", methods=["GET", "POST"])
 def api_shows():
-    if not session.get("authenticated"):
-        return jsonify({"error": "unauthorized"}), 401
-    
     if request.method == "POST":
         data = request.json
         shows_list.append(data)
@@ -644,8 +533,6 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if tunnel_url:
         message_text = (
             f"Dashboard URL...\n\n"
-            f"Password\n"
-            f"<code>{dashboard_password}</code>\n\n"
             f"{tunnel_url}"
         )
         await msg.edit_text(message_text, parse_mode="HTML")
