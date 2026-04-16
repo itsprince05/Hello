@@ -542,7 +542,11 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 def run_flask():
-    flask_app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False, threaded=True)
+    try:
+        logger.info(f"Flask starting on 0.0.0.0:{DASHBOARD_PORT}")
+        flask_app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False, threaded=True)
+    except Exception as e:
+        logger.error(f"Flask CRASHED: {e}")
 
 
 async def send_startup_message(bot_app):
@@ -591,7 +595,15 @@ def main():
     logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
-    time.sleep(1)
+    time.sleep(3)
+
+    # Verify Flask is running
+    import urllib.request
+    try:
+        resp = urllib.request.urlopen(f"http://127.0.0.1:{DASHBOARD_PORT}/health", timeout=5)
+        logger.info(f"Flask health check: {resp.read().decode()}")
+    except Exception as e:
+        logger.error(f"Flask NOT responding on port {DASHBOARD_PORT}: {e}")
 
     # Start Cloudflare tunnel in background
     logger.info("Starting Cloudflare tunnel...")
