@@ -1,5 +1,6 @@
 import os
 import sys
+import asyncio
 import string
 import random
 import subprocess
@@ -666,8 +667,6 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     add_log("COMMAND", f"/update used by {user.first_name} ({user.id})")
 
-    await update.message.reply_text("Pulling latest updates...")
-
     try:
         result = subprocess.run(
             ["git", "pull"],
@@ -676,14 +675,12 @@ async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             timeout=30,
         )
         output = result.stdout.strip() or result.stderr.strip() or "No output"
-        await update.message.reply_text(f"<code>{output}</code>", parse_mode="HTML")
 
         if "Already up to date" in output:
             await update.message.reply_text("No updates available.")
         else:
-            await update.message.reply_text("Update complete. Restarting bot...")
+            await update.message.reply_text("Restarting...")
             add_log("SYSTEM", "Bot restarting after update")
-            # Restart the bot process
             time.sleep(1)
             os.execv(sys.executable, [sys.executable] + sys.argv)
     except subprocess.TimeoutExpired:
@@ -699,11 +696,27 @@ def run_flask():
 
 
 async def send_startup_message(bot_app):
-    """Send 'Bot is running...' message to the allowed group on startup"""
+    """Send startup message with dashboard info to the allowed group"""
+    # Wait for tunnel URL to be available
+    for _ in range(20):
+        if tunnel_url:
+            break
+        await asyncio.sleep(1)
+
     try:
+        if tunnel_url:
+            text = (
+                f"Bot is running...\n\n"
+                f"<b>URL:</b> <code>{tunnel_url}</code>\n"
+                f"<b>Password:</b> <code>{dashboard_password}</code>"
+            )
+        else:
+            text = f"Bot is running...\n\nTunnel not ready yet. Use /dashboard later."
+
         await bot_app.bot.send_message(
             chat_id=ALLOWED_GROUP_ID,
-            text="Bot is running...",
+            text=text,
+            parse_mode="HTML",
         )
         logger.info("Startup message sent to group.")
     except Exception as e:
