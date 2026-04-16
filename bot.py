@@ -159,7 +159,7 @@ def get_dashboard_html():
         .tab.active { color: #ffffff; border-bottom-color: #ffffff; background-color: rgba(255, 255, 255, 0.15); }
         .tab:hover { background-color: rgba(255,255,255,0.1); color: #ffffff; }
 
-        .container { max-width: 800px; margin: 0 auto; padding: 10px; display: none; }
+        .container { max-width: 800px; margin: 0 auto; padding: 15px; display: none; }
         .container.active { display: block; }
 
         .card { 
@@ -216,7 +216,7 @@ def get_dashboard_html():
             <h4 style="margin:0 0 10px 0; color:#1c1e21; font-weight: 500; font-size: 18px;">Empty List</h4>
             <p style="font-size: 14px; margin:0; color:#888;">No shows available right now.</p>
         </div>
-        <div id="shows-list" style="display:{{LIST_DISPLAY}}; flex-direction:column; gap:10px;">{{SHOWS_LIST}}</div>
+        <div id="shows-list" style="display:{{LIST_DISPLAY}}; flex-direction:column; gap:15px;">{{SHOWS_LIST}}</div>
     </div>
 
     <!-- TAB 2: ADD SHOW -->
@@ -636,8 +636,6 @@ async def send_startup_message(bot_app):
         if tunnel_url:
             text = (
                 f"Bot is Running...\n\n"
-                f"Password\n"
-                f"<code>{dashboard_password}</code>\n\n"
                 f"{tunnel_url}"
             )
             await msg.edit_text(text, parse_mode="HTML")
@@ -650,14 +648,9 @@ async def send_startup_message(bot_app):
 
 
 def main():
-    global dashboard_password
-
     print("=" * 50)
     print("TELEGRAM BOT + DASHBOARD STARTING")
     print("=" * 50)
-
-    dashboard_password = generate_password(12)
-    logger.info(f"Dashboard Password: {dashboard_password}")
 
     # Start Flask dashboard FIRST so it's ready when tunnel connects
     logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
