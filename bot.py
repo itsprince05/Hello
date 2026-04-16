@@ -101,7 +101,7 @@ def get_dashboard_html():
         empty_display = "none"
         list_display = "flex"
         shows_rendered = "".join([
-            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
+            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden;">
                 <div style="display:flex; gap:10px; align-items:center; align-self:stretch;">
                     <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                         {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
@@ -138,7 +138,6 @@ def get_dashboard_html():
             position: relative; z-index: 100; box-sizing: border-box; height: 48px;
             background: #2481cc; color: white; padding: 0 10px; gap: 10px;
             display: flex; align-items: center; justify-content: space-between;
-            box-shadow: none; 
         }
         .nav-left { display: flex; align-items: center; }
         .navbar-icon { width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; }
@@ -148,7 +147,6 @@ def get_dashboard_html():
         .tabs { 
             display: flex; width: 100%; height: 48px; background-color: #2481cc; align-items: center; 
             position: sticky; top: 0; z-index: 99;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .tab { 
             flex: 1; height: 100%; display: flex; align-items: center; justify-content: center;
@@ -164,7 +162,7 @@ def get_dashboard_html():
 
         .card { 
             background: #ffffff; border-radius: 10px; padding: 20px; border: 1px solid #e0e0e0; 
-            margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
         }
         .card h3 { margin-top: 0; font-size: 16px; color: #1c1e21; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         
@@ -320,7 +318,7 @@ def get_dashboard_html():
                     emptyState.style.display = 'none';
                     listContainer.style.display = 'flex';
                     listContainer.innerHTML = data.shows.map(s => 
-                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; box-shadow:0 1px 2px rgba(0,0,0,0.05); overflow:hidden;">
+                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden;">
                             <div style="display:flex; gap:10px; align-items:center; align-self:stretch;">
                                 <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                                     ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
