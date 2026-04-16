@@ -90,13 +90,13 @@ def get_login_html(error=None):
         body {{ 
             font-family: 'PT Serif', serif; 
             background-color: #f0f2f5; 
-            margin: 0; padding-top: 68px; box-sizing: border-box; 
+            margin: 0; padding-top: 60px; box-sizing: border-box; 
         }}
         .navbar {{ 
-            position: fixed; top: 0; left: 0; width: 100%; 
+            position: fixed; top: 0; left: 0; width: 100%; height: 48px;
             background-color: #2481cc; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
-            display: flex; align-items: center; padding: 12px; 
+            display: flex; align-items: center; padding: 0 12px; 
             z-index: 1000; box-sizing: border-box; 
         }}
         .navbar-icon {{
@@ -161,15 +161,19 @@ def get_dashboard_html():
             color: #1c1e21; 
         }
         .action-bar { 
-            position: relative; z-index: 100; box-sizing: border-box;
-            background: #2481cc; color: white; padding: 12px; gap: 10px;
+            position: relative; z-index: 100; box-sizing: border-box; height: 48px;
+            background: #2481cc; color: white; padding: 0 12px; gap: 10px;
             display: flex; align-items: center; justify-content: space-between;
             box-shadow: none; 
         }
         .nav-left { display: flex; align-items: center; }
         .navbar-icon { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; border: 2px solid white; display: flex; align-items: center; justify-content: center; background: white; color: #2481cc; font-weight: bold; font-size: 20px; }
         .navbar-title { font-size: 20px; font-weight: 500; color: white; letter-spacing: 0.15px; }
-        .logout-btn { color: white; text-decoration: none; font-weight: 600; font-size: 14px; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; transition: 0.2s; }
+        .logout-btn { 
+            color: white; text-decoration: none; font-weight: 600; font-size: 14px; 
+            background: rgba(255,255,255,0.2); padding: 0 16px; border-radius: 6px; transition: 0.2s; 
+            display: flex; align-items: center; gap: 8px; height: 40px; box-sizing: border-box;
+        }
         .logout-btn:hover { background: rgba(255,255,255,0.3); }
         
         .tabs { 
@@ -227,7 +231,10 @@ def get_dashboard_html():
             <div class="navbar-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-music4-icon lucide-music-4"><path d="M9 18V5l12-2v13"/><path d="m9 9 12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
             <div class="navbar-title">Bot Dashboard</div>
         </div>
-        <a href="/logout" class="logout-btn">Logout</a>
+        <a href="/logout" class="logout-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            Logout
+        </a>
     </div>
     
     <div class="tabs">
