@@ -1,4 +1,5 @@
 import os
+import sys
 import string
 import random
 import subprocess
@@ -22,6 +23,7 @@ from flask import Flask, jsonify, request, redirect, session
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 BOT_TOKEN = "8616525566:AAFF9H7s0iRacpAMzXZXS3ij3mN8ewJBh6o"
 DASHBOARD_PORT = 8080
+ALLOWED_GROUP_ID = -1003881179060
 
 # Auto-detect OS for cloudflared binary
 if platform.system() == "Windows":
@@ -535,20 +537,15 @@ def api_stats():
 
 
 # ─── BOT HANDLERS ────────────────────────────────────────────────────────────
+def is_allowed(chat_id):
+    """Check if the chat is the allowed group"""
+    return chat_id == ALLOWED_GROUP_ID
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
-
-    # In DM — tell user to add bot to group
-    if chat.type == "private":
-        await update.message.reply_text(
-            "👋 <b>Hello!</b>\n\n"
-            "I only work in <b>groups</b>. Add me to a group and use /start there.\n\n"
-            "📌 /start — Group name & ID\n"
-            "🌐 /dashboard — Dashboard URL\n"
-            "🏓 /ping — Check if bot is alive",
-            parse_mode="HTML",
-        )
-        return
+    if not is_allowed(chat.id):
+        return  # No response — bot appears dead
 
     group_name = chat.title or "Unknown Group"
     group_id = str(chat.id)
@@ -561,55 +558,101 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_log("COMMAND", f"/start used in {group_name} ({group_id})")
 
     message_text = (
-        f"📌 <b>Group Name:</b> {group_name}\n"
-        f"🆔 <b>Group ID:</b> <code>{group_id}</code>"
+        f"<b>Group Name:</b> {group_name}\n"
+        f"<b>Group ID:</b> <code>{group_id}</code>"
     )
     await update.message.reply_text(message_text, parse_mode="HTML")
 
 
-async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Quick test command — works everywhere"""
-    await update.message.reply_text("🏓 <b>Pong!</b> Bot is alive.", parse_mode="HTML")
-
-
 async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
-    if chat.type == "private":
-        await update.message.reply_text("⚠️ This command only works in groups.")
+    if not is_allowed(chat.id):
         return
 
     if not tunnel_url:
-        await update.message.reply_text("⏳ Tunnel is not ready yet. Please wait...")
+        await update.message.reply_text("Tunnel is not ready yet. Please wait...")
         return
 
     add_log("COMMAND", f"/dashboard used in {chat.title} ({chat.id})")
 
     message_text = (
-        f"🌐 <b>Dashboard Access</b>\n\n"
-        f"🔗 <b>URL:</b> <code>{tunnel_url}</code>\n"
-        f"🔑 <b>Password:</b> <code>{dashboard_password}</code>\n\n"
-        f"⚠️ <i>This URL changes every restart. Password is auto-generated.</i>"
+        f"<b>Dashboard Access</b>\n\n"
+        f"<b>URL:</b> <code>{tunnel_url}</code>\n"
+        f"<b>Password:</b> <code>{dashboard_password}</code>\n\n"
+        f"<i>This URL changes every restart. Password is auto-generated.</i>"
     )
     await update.message.reply_text(message_text, parse_mode="HTML")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
-    if chat.type == "private":
-        await update.message.reply_text("⚠️ This command only works in groups.")
+    if not is_allowed(chat.id):
         return
 
     add_log("COMMAND", f"/help used in {chat.title} ({chat.id})")
 
     message_text = (
-        "🤖 <b>Bot Commands</b>\n\n"
-        "📌 /start — Show group name & ID\n"
-        "🌐 /dashboard — Get dashboard access URL\n"
-        "🏓 /ping — Check if bot is alive\n"
-        "❓ /help — Show this help message\n\n"
-        "<i>Note: This bot only works in groups.</i>"
+        "<b>Bot Commands</b>\n\n"
+        "/start - Show group name and ID\n"
+        "/dashboard - Get dashboard access URL\n"
+        "/update - Update bot from repo (admin only)\n"
+        "/help - Show this help message"
     )
     await update.message.reply_text(message_text, parse_mode="HTML")
+
+
+async def update_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if not is_allowed(chat.id):
+        return
+
+    user = update.effective_user
+
+    # Check if user is admin with can_change_info permission
+    try:
+        member = await chat.get_member(user.id)
+        is_admin = member.status in ["creator", "administrator"]
+        can_change = False
+        if member.status == "creator":
+            can_change = True
+        elif member.status == "administrator" and member.can_change_info:
+            can_change = True
+
+        if not is_admin or not can_change:
+            await update.message.reply_text("You don't have permission to use this command.")
+            return
+    except Exception as e:
+        logger.error(f"Failed to check admin status: {e}")
+        await update.message.reply_text("Failed to verify permissions.")
+        return
+
+    add_log("COMMAND", f"/update used by {user.first_name} ({user.id})")
+
+    await update.message.reply_text("Pulling latest updates...")
+
+    try:
+        result = subprocess.run(
+            ["git", "pull"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        output = result.stdout.strip() or result.stderr.strip() or "No output"
+        await update.message.reply_text(f"<code>{output}</code>", parse_mode="HTML")
+
+        if "Already up to date" in output:
+            await update.message.reply_text("No updates available.")
+        else:
+            await update.message.reply_text("Update complete. Restarting bot...")
+            add_log("SYSTEM", "Bot restarting after update")
+            # Restart the bot process
+            time.sleep(1)
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+    except subprocess.TimeoutExpired:
+        await update.message.reply_text("Update timed out.")
+    except Exception as e:
+        logger.error(f"Update failed: {e}")
+        await update.message.reply_text(f"Update failed: {e}")
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
@@ -617,18 +660,30 @@ def run_flask():
     flask_app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False)
 
 
+async def send_startup_message(bot_app):
+    """Send 'Bot is running...' message to the allowed group on startup"""
+    try:
+        await bot_app.bot.send_message(
+            chat_id=ALLOWED_GROUP_ID,
+            text="Bot is running...",
+        )
+        logger.info("Startup message sent to group.")
+    except Exception as e:
+        logger.error(f"Failed to send startup message: {e}")
+
+
 def main():
     global dashboard_password
 
     print("=" * 50)
-    print("🤖 TELEGRAM BOT + DASHBOARD STARTING")
+    print("TELEGRAM BOT + DASHBOARD STARTING")
     print("=" * 50)
 
     dashboard_password = generate_password(12)
-    logger.info(f"🔑 Dashboard Password: {dashboard_password}")
+    logger.info(f"Dashboard Password: {dashboard_password}")
 
     # Start Cloudflare tunnel in background
-    logger.info("🔗 Starting Cloudflare tunnel...")
+    logger.info("Starting Cloudflare tunnel...")
     tunnel_thread = threading.Thread(target=start_cloudflare_tunnel, daemon=True)
     tunnel_thread.start()
 
@@ -636,22 +691,25 @@ def main():
     time.sleep(5)
 
     # Start Flask dashboard in background
-    logger.info(f"🌐 Starting dashboard on port {DASHBOARD_PORT}...")
+    logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
 
     # Build and run the Telegram bot
-    logger.info("🤖 Starting Telegram bot...")
+    logger.info("Starting Telegram bot...")
     bot_app = Application.builder().token(BOT_TOKEN).build()
 
     # Command handlers
     bot_app.add_handler(CommandHandler("start", start_command))
-    bot_app.add_handler(CommandHandler("ping", ping_command))
     bot_app.add_handler(CommandHandler("dashboard", dashboard_command))
     bot_app.add_handler(CommandHandler("help", help_command))
+    bot_app.add_handler(CommandHandler("update", update_command))
 
     add_log("SYSTEM", "Bot started successfully")
-    logger.info("✅ Bot is running! Send /ping to test.")
+    logger.info("Bot is running.")
+
+    # Send startup message using post_init
+    bot_app.post_init = lambda app: send_startup_message(app)
 
     bot_app.run_polling(drop_pending_updates=True)
 
