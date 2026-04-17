@@ -302,7 +302,7 @@ def get_dashboard_html():
                 rj_token: document.getElementById('add-show-rj-token').value
             };
             if(!data.name || !data.id || !data.image || !data.rj_uid || !data.rj_token) {
-                alert("All fields are required!");
+                alert("All fields are required...");
                 return;
             }
 
@@ -468,7 +468,7 @@ def get_show_detail_html(show):
         }}
         .get-btn {{
             padding: 12px 30px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; min-width: 150px; height: 46px; box-sizing: border-box; margin-top: 50px;
+            display: flex; align-items: center; justify-content: center; min-width: 150px; height: 46px; box-sizing: border-box; margin-top: -50px;
         }}
         @keyframes spin {{
             100% {{ transform: rotate(360deg); }}
@@ -519,9 +519,51 @@ def get_show_detail_html(show):
             document.getElementById(tabId).classList.add('active');
         }}
 
-        function showLoader(btn, loaderId) {{
+        async function showLoader(btn, loaderId) {{
             btn.style.display = 'none';
-            document.getElementById(loaderId).style.display = 'block';
+            const loaderDiv = document.getElementById(loaderId);
+            loaderDiv.style.display = 'block';
+
+            const tab = loaderId.split('-')[1]; // unofficial or published
+            const showIdStr = '{html_escape.escape(str(show.get("id", "")))}';
+            const showIdEncoded = encodeURIComponent(showIdStr);
+
+            try {{
+                const res = await fetch(`/api/shows/${{showIdEncoded}}/fetch`, {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ tab: tab }})
+                }});
+                const data = await res.json();
+
+                if(!data.success && data.code === 'UNAUTHORIZED') {{
+                    loaderDiv.style.display = 'none';
+                    const wrapper = btn.closest('.get-wrapper');
+                    const errLabel = document.createElement('div');
+                    errLabel.textContent = 'Unauthorized Error';
+                    errLabel.style.color = '#fa5252';
+                    errLabel.style.fontWeight = '600';
+                    errLabel.style.fontSize = '16px';
+                    wrapper.appendChild(errLabel);
+                    return; // DO NOT restore the button
+                }}
+                
+                // Normal success or other errors
+                if(data.success) {{
+                    alert('Items Fetched! Found Pages: ' + data.pages_fetched);
+                }} else {{
+                    alert(data.error || 'Failed to fetch items');
+                }}
+            }} catch(e) {{
+                alert('Connection Error!');
+                console.error(e);
+            }} finally {{
+                // As long as it is not strictly unauthorized replacing the UI, restore DOM
+                if(!btn.closest('.get-wrapper').querySelector('div:last-child').textContent.includes('Unauthorized')) {{
+                    loaderDiv.style.display = 'none';
+                    btn.style.display = 'flex';
+                }}
+            }}
         }}
     </script>
 </body>
@@ -683,6 +725,126 @@ def api_shows_delete(show_id):
     shows_list = [s for s in shows_list if str(s.get("id")) != show_id]
     save_shows(shows_list)
     return jsonify({"status": "success"})
+
+
+@flask_app.route("/api/shows/<path:show_id>/fetch", methods=["POST"])
+def api_shows_fetch(show_id):
+    import urllib.request, urllib.error, json
+    global shows_list
+    
+    tab_type = request.json.get("tab", "unofficial")
+    show = next((s for s in shows_list if str(s.get("id")) == show_id), None)
+    if not show:
+        return jsonify({"success": False, "error": "Show not found"}), 404
+        
+    rj_uid = show.get("rj_uid")
+    refresh_token_val = show.get("rj_token")
+    
+    if not rj_uid or not refresh_token_val:
+        return jsonify({"success": False, "error": "Missing UID or Refresh Token"}), 400
+
+    def refresh_pocket_token(refresh_token):
+        url = "https://iam-cms.pocketfm.com/v1/auth/refresh"
+        headers = {
+            "accept": "application/json, text/plain, */*",
+            "app-name": "pocket_studio",
+            "content-type": "application/json",
+            "origin": "https://partner.pocketfm.com",
+            "platform": "web",
+            "priority": "u=1, i",
+            "referer": "https://partner.pocketfm.com/",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0"
+        }
+        data = json.dumps({"refresh_token": refresh_token}).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode())
+        except urllib.error.HTTPError as e:
+            try:
+                return json.loads(e.read().decode())
+            except:
+                return {"code": "UNAUTHORIZED", "error": str(e)}
+        except Exception as e:
+            return {"code": "ERROR", "error": str(e)}
+
+    def get_pocket_episodes(acc_token, page_no):
+        url = f"https://api.studio.pocketfm.com/v2/content_api/book.show_episodes?is_novel=0&show_id={show_id}&view=dashboard"
+        if tab_type == "unofficial":
+            url += "&paginate_chapters=true"
+        url += f"&page_no={page_no}"
+            
+        headers = {
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "en-US,en;q=0.9",
+            "app-client": "consumer-web",
+            "app-version": "180",
+            "auth-token": "web-auth",
+            "authorization": acc_token,
+            "origin": "https://partner.pocketfm.com",
+            "priority": "u=1, i",
+            "referer": "https://partner.pocketfm.com/",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-site",
+            "source": "studio",
+            "uid": rj_uid,
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+            "web-platform": "studio"
+        }
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode())
+        except urllib.error.HTTPError as e:
+            try:
+                return json.loads(e.read().decode())
+            except:
+                return {"status": 0, "error": str(e)}
+        except Exception as e:
+            return {"status": 0, "error": str(e)}
+
+    # Check and generate token initially
+    access_token = show.get("access_token")
+    if not access_token:
+        res = refresh_pocket_token(refresh_token_val)
+        if res.get("access_token"):
+            show["access_token"] = res["access_token"]
+            show["rj_token"] = res.get("refresh_token", refresh_token_val)
+            save_shows(shows_list)
+            access_token = show["access_token"]
+        else:
+            if res.get("code") == "UNAUTHORIZED":
+                return jsonify({"success": False, "code": "UNAUTHORIZED"}), 200
+            return jsonify({"success": False, "error": "Token Refresh Failed", "details": res}), 200
+
+    page = 1
+    resp = get_pocket_episodes(access_token, page)
+    
+    # Checking dynamic token expiration based on provided structures
+    if resp.get("status") == 0 and resp.get("error") in ["Invalid token", "Token expired"]:
+        # Auto-Refresh requested...
+        r_res = refresh_pocket_token(show.get("rj_token"))
+        if r_res.get("access_token"):
+            show["access_token"] = r_res["access_token"]
+            show["rj_token"] = r_res.get("refresh_token", show.get("rj_token"))
+            save_shows(shows_list)
+            access_token = show["access_token"]
+            
+            # Fetch again
+            resp = get_pocket_episodes(access_token, page)
+            if resp.get("status") == 0 and resp.get("error") in ["Invalid token", "Token expired"]:
+                return jsonify({"success": False, "error": resp.get("error")}), 200
+        else:
+            if r_res.get("code") == "UNAUTHORIZED":
+                return jsonify({"success": False, "code": "UNAUTHORIZED"}), 200
+            return jsonify({"success": False, "error": "Token Refresh Retry Failed"}), 200
+            
+    # Other explicit server errors
+    if resp.get("status") == 0 and "error" in resp:
+        return jsonify({"success": False, "error": resp.get("error")}), 200
+        
+    return jsonify({"success": True, "pages_fetched": 1, "data": [resp]})
 
 
 # ─── BOT HANDLERS ────────────────────────────────────────────────────────────
