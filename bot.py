@@ -165,7 +165,7 @@ def get_dashboard_html():
             background: #ffffff; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0; 
             margin-bottom: 10px;
         }
-        .card h3 { margin-top: 0; font-size: 16px; color: #1c1e21; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .card h3 { margin-top: 0; font-size: 16px; color: #1c1e21; margin-bottom: 15px; }
         
         .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
         .stat-row:last-child { border-bottom: none; }
@@ -221,7 +221,7 @@ def get_dashboard_html():
     <!-- TAB 2: ADD SHOW -->
     <div id="add-show" class="container">
         <div class="card">
-            <h3 style="margin-top:0; color:#1c1e21; border-bottom:1px solid #eee; padding-bottom:10px;">Add Show</h3>
+            <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">Add Show</h3>
             <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
                 <input type="text" id="add-show-name" placeholder="Show Name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
                 <input type="text" id="add-show-id" placeholder="Show ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
