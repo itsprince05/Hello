@@ -240,7 +240,7 @@ def get_dashboard_html():
     <div id="delete-popup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
         <div style="background:#fff; padding:20px; border-radius:12px; width:calc(100% - 40px); max-width:320px; box-sizing:border-box;">
             <h3 style="margin-top:0; color:#1c1e21;">Delete Show</h3>
-            <p style="font-size:14px; color:#666; margin-bottom:15px;">Type <strong>delete</strong> to confirm.</p>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">Type <strong>delete</strong> to confirm...</p>
             <input type="text" id="delete-confirm-input" placeholder="Type here..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; margin-bottom:15px; font-family:inherit; font-size:14px; outline:none;">
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button onclick="hideDeletePopup()" style="padding:10px 15px; background:#f0f2f5; color:#333; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Cancel</button>
@@ -377,7 +377,7 @@ def get_dashboard_html():
             if(!showToDelete) return;
             
             try {
-                const res = await fetch(`/api/shows/${showToDelete}`, { method: 'DELETE' });
+                const res = await fetch(`/api/shows/${encodeURIComponent(showToDelete)}`, { method: 'DELETE' });
                 if(res.ok) {
                     hideDeletePopup();
                     window.location.reload();
@@ -536,7 +536,7 @@ def api_shows():
     return jsonify({"shows": shows_list})
 
 
-@flask_app.route("/api/shows/<show_id>", methods=["DELETE"])
+@flask_app.route("/api/shows/<path:show_id>", methods=["DELETE"])
 def api_shows_delete(show_id):
     global shows_list
     shows_list = [s for s in shows_list if str(s.get("id")) != show_id]
@@ -566,8 +566,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_log("COMMAND", f"/start used in {group_name} ({group_id})")
 
     message_text = (
-        f"<b>Group Name:</b> {group_name}\n"
-        f"<b>Group ID:</b> <code>{group_id}</code>"
+        f"Group Name: {group_name}\n"
+        f"Group ID: <code>{group_id}</code>"
     )
     await update.message.reply_text(message_text, parse_mode="HTML")
 
