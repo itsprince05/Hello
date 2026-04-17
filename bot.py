@@ -108,9 +108,11 @@ def get_dashboard_html():
                     </div>
                     <div style="display:flex; flex-direction:column; gap:4px; margin: 10px 0;">
                         <div style="font-weight:600; font-size:15px; color:#1c1e21;">{html_escape.escape(s.get("name", ""))}</div>
-                        <div style="font-size:13px; color:#666;">ID: <span style="color:#2481cc;">{html_escape.escape(s.get("id", ""))}</span></div>
-                        <div style="font-size:12px; color:#999;">UID: {html_escape.escape(s.get("rj_uid", "")) or 'N/A'}</div>
+                        <div style="font-size:13px; color:#2481cc;">{html_escape.escape(s.get("id", ""))}</div>
                     </div>
+                </div>
+                <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('{html_escape.escape(s.get("id", ""))}'); event.stopPropagation();">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </div>
             </div>"""
             for s in shows_list
@@ -234,6 +236,19 @@ def get_dashboard_html():
 
     <div class="toast" id="toast">Copied to clipboard!</div>
 
+    <!-- DELETE POPUP -->
+    <div id="delete-popup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; padding:20px; border-radius:12px; width:calc(100% - 40px); max-width:320px; box-sizing:border-box;">
+            <h3 style="margin-top:0; color:#1c1e21;">Delete Show</h3>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">Type <strong>delete</strong> to confirm.</p>
+            <input type="text" id="delete-confirm-input" placeholder="Type here..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; margin-bottom:15px; font-family:inherit; font-size:14px; outline:none;">
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button onclick="hideDeletePopup()" style="padding:10px 15px; background:#f0f2f5; color:#333; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Cancel</button>
+                <button onclick="confirmDelete()" style="padding:10px 15px; background:#fa5252; color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function switchTab(tabId, event) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -325,15 +340,49 @@ def get_dashboard_html():
                                 </div>
                                 <div style="display:flex; flex-direction:column; gap:4px; margin: 10px 0;">
                                     <div style="font-weight:600; font-size:15px; color:#1c1e21;">${s.name}</div>
-                                    <div style="font-size:13px; color:#666;">ID: <span style="color:#2481cc;">${s.id}</span></div>
-                                    <div style="font-size:12px; color:#999;">UID: ${s.rj_uid || 'N/A'}</div>
+                                    <div style="font-size:13px; color:#2481cc;">${s.id}</div>
                                 </div>
+                            </div>
+                            <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('${s.id}'); event.stopPropagation();">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             </div>
                         </div>`
                     ).join('');
                 } else {
                     emptyState.style.display = 'block';
                     listContainer.style.display = 'none';
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        let showToDelete = null;
+
+        function showDeletePopup(id) {
+            showToDelete = id;
+            document.getElementById('delete-confirm-input').value = '';
+            document.getElementById('delete-popup').style.display = 'flex';
+        }
+
+        function hideDeletePopup() {
+            document.getElementById('delete-popup').style.display = 'none';
+            showToDelete = null;
+        }
+
+        async function confirmDelete() {
+            const val = document.getElementById('delete-confirm-input').value;
+            if(val.toLowerCase() !== 'delete') {
+                alert('Please type delete to confirm.');
+                return;
+            }
+            if(!showToDelete) return;
+            
+            try {
+                const res = await fetch(`/api/shows/${showToDelete}`, { method: 'DELETE' });
+                if(res.ok) {
+                    hideDeletePopup();
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete show.');
                 }
             } catch(e) { console.error(e); }
         }
@@ -485,6 +534,14 @@ def api_shows():
         return jsonify({"status": "success"})
         
     return jsonify({"shows": shows_list})
+
+
+@flask_app.route("/api/shows/<show_id>", methods=["DELETE"])
+def api_shows_delete(show_id):
+    global shows_list
+    shows_list = [s for s in shows_list if str(s.get("id")) != show_id]
+    save_shows(shows_list)
+    return jsonify({"status": "success"})
 
 
 # ─── BOT HANDLERS ────────────────────────────────────────────────────────────
