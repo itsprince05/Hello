@@ -106,9 +106,8 @@ def get_dashboard_html():
                     <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                         {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
                     </div>
-                    <div style="display:flex; flex-direction:column; gap:4px; margin: 10px 0;">
-                        <div style="font-weight:600; font-size:15px; color:#1c1e21;">{html_escape.escape(s.get("name", ""))}</div>
-                        <div style="font-size:13px; color:#2481cc;">{html_escape.escape(s.get("id", ""))}</div>
+                    <div style="display:flex; flex-direction:column; margin: 10px 0; overflow:hidden;">
+                        <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">{html_escape.escape(s.get("name", ""))}</div>
                     </div>
                 </div>
                 <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('{html_escape.escape(s.get("id", ""))}'); event.stopPropagation();">
@@ -341,9 +340,8 @@ def get_dashboard_html():
                                 <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                                     ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
                                 </div>
-                                <div style="display:flex; flex-direction:column; gap:4px; margin: 10px 0;">
-                                    <div style="font-weight:600; font-size:15px; color:#1c1e21;">${s.name}</div>
-                                    <div style="font-size:13px; color:#2481cc;">${s.id}</div>
+                                <div style="display:flex; flex-direction:column; margin: 10px 0; overflow:hidden;">
+                                    <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${s.name}</div>
                                 </div>
                             </div>
                             <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('${s.id}'); event.stopPropagation();">
@@ -470,7 +468,7 @@ def get_show_detail_html(show):
         }}
         .get-btn {{
             padding: 12px 30px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; min-width: 90px; height: 46px; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center; min-width: 150px; height: 46px; box-sizing: border-box; margin-top: 50px;
         }}
         @keyframes spin {{
             100% {{ transform: rotate(360deg); }}
@@ -496,14 +494,20 @@ def get_show_detail_html(show):
     <!-- TAB 1: UNOFFICIAL -->
     <div id="unofficial" class="container active">
         <div class="get-wrapper">
-            <button class="get-btn" onclick="showLoader(this)">Get</button>
+            <button class="get-btn" onclick="showLoader(this, 'loader-unofficial')">Get</button>
+            <div id="loader-unofficial" style="display:none; color:#2481cc;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-icon lucide-loader"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+            </div>
         </div>
     </div>
 
     <!-- TAB 2: PUBLISHED -->
     <div id="published" class="container">
         <div class="get-wrapper">
-            <button class="get-btn" onclick="showLoader(this)">Get</button>
+            <button class="get-btn" onclick="showLoader(this, 'loader-published')">Get</button>
+            <div id="loader-published" style="display:none; color:#2481cc;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-icon lucide-loader"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+            </div>
         </div>
     </div>
 
@@ -515,9 +519,9 @@ def get_show_detail_html(show):
             document.getElementById(tabId).classList.add('active');
         }}
 
-        function showLoader(btn) {{
-            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-icon lucide-loader"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>';
-            btn.style.pointerEvents = 'none';
+        function showLoader(btn, loaderId) {{
+            btn.style.display = 'none';
+            document.getElementById(loaderId).style.display = 'block';
         }}
     </script>
 </body>
