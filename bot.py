@@ -162,7 +162,7 @@ def get_dashboard_html():
         .container.active { display: block; }
 
         .card { 
-            background: #ffffff; border-radius: 10px; padding: 20px; border: 1px solid #e0e0e0; 
+            background: #ffffff; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0; 
             margin-bottom: 10px;
         }
         .card h3 { margin-top: 0; font-size: 16px; color: #1c1e21; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
