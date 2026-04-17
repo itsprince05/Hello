@@ -244,7 +244,7 @@ def get_dashboard_html():
             <input type="text" id="delete-confirm-input" placeholder="Type here..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; margin-bottom:15px; font-family:inherit; font-size:14px; outline:none;">
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button onclick="hideDeletePopup()" style="padding:10px 15px; background:#f0f2f5; color:#333; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Cancel</button>
-                <button onclick="confirmDelete()" style="padding:10px 15px; background:#fa5252; color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Delete</button>
+                <button id="delete-btn-submit" onclick="confirmDelete()" style="padding:10px 15px; background:#fa5252; color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Delete</button>
             </div>
         </div>
     </div>
@@ -315,7 +315,7 @@ def get_dashboard_html():
                 });
                 if(res.ok) {
                     ['name', 'id', 'image', 'rj-uid', 'rj-token'].forEach(f => document.getElementById(`add-show-${f}`).value = '');
-                    alert("Show added successfully!");
+                    alert("Show added successfully...");
                     loadShows();
                     document.querySelectorAll('.tab')[0].click();
                 } else {
@@ -359,16 +359,40 @@ def get_dashboard_html():
         }
 
         let showToDelete = null;
+        let deleteTimerInterval = null;
 
         function showDeletePopup(id) {
             showToDelete = id;
             document.getElementById('delete-confirm-input').value = '';
             document.getElementById('delete-popup').style.display = 'flex';
+            
+            const btn = document.getElementById('delete-btn-submit');
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            
+            if(deleteTimerInterval) clearInterval(deleteTimerInterval);
+            let counter = 10;
+            btn.textContent = `Delete (${counter})`;
+            
+            deleteTimerInterval = setInterval(() => {
+                counter--;
+                if(counter <= 0) {
+                    clearInterval(deleteTimerInterval);
+                    btn.textContent = 'Delete';
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                } else {
+                    btn.textContent = `Delete (${counter})`;
+                }
+            }, 1000);
         }
 
         function hideDeletePopup() {
             document.getElementById('delete-popup').style.display = 'none';
             showToDelete = null;
+            if(deleteTimerInterval) clearInterval(deleteTimerInterval);
         }
 
         async function confirmDelete() {
@@ -444,11 +468,15 @@ def get_show_detail_html(show):
         .get-wrapper {{
             display: flex; flex-direction: column; align-items: center; text-align: center;
         }}
-        .get-text {{
-            font-size: 16px; color: #666; margin-bottom: 15px; font-weight: 500;
-        }}
         .get-btn {{
             padding: 12px 30px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; min-width: 90px; height: 46px; box-sizing: border-box;
+        }}
+        @keyframes spin {{
+            100% {{ transform: rotate(360deg); }}
+        }}
+        .lucide-loader {{
+            animation: spin 1s linear infinite;
         }}
     </style>
 </head>
@@ -468,16 +496,14 @@ def get_show_detail_html(show):
     <!-- TAB 1: UNOFFICIAL -->
     <div id="unofficial" class="container active">
         <div class="get-wrapper">
-            <div class="get-text">Unofficial me Get</div>
-            <button class="get-btn">Get</button>
+            <button class="get-btn" onclick="showLoader(this)">Get</button>
         </div>
     </div>
 
     <!-- TAB 2: PUBLISHED -->
     <div id="published" class="container">
         <div class="get-wrapper">
-            <div class="get-text">Published me Get</div>
-            <button class="get-btn">Get</button>
+            <button class="get-btn" onclick="showLoader(this)">Get</button>
         </div>
     </div>
 
@@ -487,6 +513,11 @@ def get_show_detail_html(show):
             document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
             event.currentTarget.classList.add('active');
             document.getElementById(tabId).classList.add('active');
+        }}
+
+        function showLoader(btn) {{
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-icon lucide-loader"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>';
+            btn.style.pointerEvents = 'none';
         }}
     </script>
 </body>
