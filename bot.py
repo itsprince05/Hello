@@ -716,7 +716,8 @@ def api_shows():
         save_shows(shows_list)
         return jsonify({"status": "success"})
         
-    return jsonify({"shows": shows_list})
+    safe_shows = [{"id": s.get("id"), "name": s.get("name"), "image": s.get("image")} for s in shows_list]
+    return jsonify({"shows": safe_shows})
 
 
 @flask_app.route("/api/shows/<path:show_id>", methods=["DELETE"])
