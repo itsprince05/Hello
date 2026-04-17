@@ -101,8 +101,8 @@ def get_dashboard_html():
         empty_display = "none"
         list_display = "flex"
         shows_rendered = "".join([
-            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden;">
-                <div style="display:flex; gap:10px; align-items:center; align-self:stretch;">
+            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/show/{__import__('urllib').parse.quote(str(s.get('id', '')))}'">
+                <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
                     <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                         {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
                     </div>
@@ -302,7 +302,10 @@ def get_dashboard_html():
                 rj_uid: document.getElementById('add-show-rj-uid').value,
                 rj_token: document.getElementById('add-show-rj-token').value
             };
-            if(!data.name || !data.id) return alert("Show Name and Show ID are required!");
+            if(!data.name || !data.id || !data.image || !data.rj_uid || !data.rj_token) {
+                alert("All fields are required!");
+                return;
+            }
 
             try {
                 const res = await fetch('/api/shows', {
@@ -333,8 +336,8 @@ def get_dashboard_html():
                     emptyState.style.display = 'none';
                     listContainer.style.display = 'flex';
                     listContainer.innerHTML = data.shows.map(s => 
-                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden;">
-                            <div style="display:flex; gap:10px; align-items:center; align-self:stretch;">
+                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/show/${encodeURIComponent(s.id)}'">
+                            <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
                                 <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                                     ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
                                 </div>
@@ -395,6 +398,100 @@ def get_dashboard_html():
 </html>'''
 
     return html.replace("{{EMPTY_DISPLAY}}", empty_display).replace("{{LIST_DISPLAY}}", list_display).replace("{{SHOWS_LIST}}", shows_rendered)
+
+
+def get_show_detail_html(show):
+    import html as html_escape
+    s_name = html_escape.escape(show.get("name", "Unknown"))
+    
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{s_name}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {{ 
+            font-family: 'Outfit', sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; padding: 0; 
+            color: #1c1e21; 
+        }}
+        .action-bar {{ 
+            position: sticky; top: 0; z-index: 100; box-sizing: border-box; height: 48px;
+            background: #2481cc; color: white; padding: 0 10px; gap: 10px;
+            display: flex; align-items: center;
+        }}
+        .back-btn {{ width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; border-radius: 50%; }}
+        .back-btn:hover {{ background: rgba(255,255,255,0.2); }}
+        .navbar-title {{ font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }}
+        
+        .tabs {{ 
+            display: flex; width: 100%; height: 48px; background-color: #2481cc; align-items: center; 
+            position: sticky; top: 48px; z-index: 99;
+        }}
+        .tab {{ 
+            flex: 1; height: 100%; display: flex; align-items: center; justify-content: center;
+            font-weight: 500; font-size: 14px; text-transform: none; letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.7); cursor: pointer; 
+            border-bottom: 3px solid transparent; transition: background 0.2s, color 0.2s; 
+        }}
+        .tab.active {{ color: #ffffff; border-bottom-color: #ffffff; background-color: rgba(255, 255, 255, 0.15); }}
+        .container {{ max-width: 800px; margin: 0 auto; padding: 15px; display: none; height: calc(100vh - 96px); box-sizing: border-box; }}
+        .container.active {{ display: flex; flex-direction: column; align-items: center; justify-content: center; }}
+        
+        .get-wrapper {{
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+        }}
+        .get-text {{
+            font-size: 16px; color: #666; margin-bottom: 15px; font-weight: 500;
+        }}
+        .get-btn {{
+            padding: 12px 30px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;
+        }}
+    </style>
+</head>
+<body>
+    <div class="action-bar">
+        <div class="back-btn" onclick="window.history.back()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        </div>
+        <div class="navbar-title">{s_name}</div>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('unofficial', event)">Unofficial</div>
+        <div class="tab" onclick="switchTab('published', event)">Published</div>
+    </div>
+
+    <!-- TAB 1: UNOFFICIAL -->
+    <div id="unofficial" class="container active">
+        <div class="get-wrapper">
+            <div class="get-text">Unofficial me Get</div>
+            <button class="get-btn">Get</button>
+        </div>
+    </div>
+
+    <!-- TAB 2: PUBLISHED -->
+    <div id="published" class="container">
+        <div class="get-wrapper">
+            <div class="get-text">Published me Get</div>
+            <button class="get-btn">Get</button>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId, event) {{
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }}
+    </script>
+</body>
+</html>'''
+    return html
 
 
 # ─── CLOUDFLARE TUNNEL ───────────────────────────────────────────────────────
@@ -513,6 +610,15 @@ def health():
 @flask_app.route("/")
 def index():
     return get_dashboard_html()
+
+
+@flask_app.route("/show/<path:show_id>")
+def show_detail(show_id):
+    show = next((s for s in shows_list if str(s.get("id")) == show_id), None)
+    if not show:
+        return "Show not found", 404
+        
+    return get_show_detail_html(show)
 
 
 @flask_app.route("/api/stats")
