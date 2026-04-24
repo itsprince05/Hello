@@ -1042,8 +1042,6 @@ def api_logins_shows(uid):
         "web-platform": "studio"
     }
     
-    req = urllib.request.Request(url, headers=headers)
-    
     curl_cmd = f"curl '{url}'"
     for k, v in headers.items():
         curl_cmd += f" \\\n  -H '{k}: {v}'"
@@ -1051,26 +1049,24 @@ def api_logins_shows(uid):
     log_msg = f"User Shows Request cURL:\n{curl_cmd}\n"
     
     try:
-        with urllib.request.urlopen(req) as response:
-            resp_body = response.read().decode()
-            log_msg += f"Response Code: {response.getcode()}\nResponse Body: {resp_body}"
-            add_log("API", log_msg)
-            try:
-                res_json = json.loads(resp_body)
-            except:
-                res_json = {"status": 0, "message": "Invalid JSON response"}
-            res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
-            return jsonify(res_json)
-    except urllib.error.HTTPError as e:
-        resp_body = e.read().decode()
-        log_msg += f"Response Error Code: {e.code}\nResponse Error Body: {resp_body}"
+        import subprocess
+        curl_args = ["curl", "-s", url]
+        for k, v in headers.items():
+            curl_args.extend(["-H", f"{k}: {v}"])
+            
+        result = subprocess.run(curl_args, capture_output=True, text=True)
+        resp_body = result.stdout
+        
+        log_msg += f"Curl Exit Code: {result.returncode}\nResponse Body: {resp_body}"
         add_log("API", log_msg)
+        
         try:
             res_json = json.loads(resp_body)
-            res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
-            return jsonify(res_json), e.code
         except:
-            return jsonify({"status": 0, "message": str(e), "debug": {"curl_command": curl_cmd, "response_body": resp_body}}), e.code
+            res_json = {"status": 0, "message": f"Invalid JSON response. stderr: {result.stderr}"}
+            
+        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body or result.stderr}
+        return jsonify(res_json)
     except Exception as e:
         log_msg += f"Exception: {str(e)}"
         add_log("API", log_msg)
