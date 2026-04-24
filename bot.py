@@ -117,6 +117,7 @@ def get_dashboard_html():
             background-color: #f0f2f5; 
             margin: 0; padding: 0; 
             color: #1c1e21; 
+            -webkit-user-select: none; user-select: none;
         }
         .action-bar { 
             position: relative; z-index: 100; box-sizing: border-box; height: 48px;
@@ -588,7 +589,7 @@ def get_login_detail_html(uid, name):
     <title>Bot Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {{ font-family: 'Outfit', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; color: #1c1e21; }}
+        body {{ font-family: 'Outfit', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; color: #1c1e21; -webkit-user-select: none; user-select: none; }}
         .action-bar {{ position: sticky; top: 0; z-index: 100; box-sizing: border-box; height: 48px; background: #2481cc; color: white; padding: 0 10px; gap: 10px; display: flex; align-items: center; }}
         .back-btn {{ width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; border-radius: 50%; }}
         .back-btn:hover {{ background: rgba(255,255,255,0.2); }}
@@ -616,7 +617,7 @@ def get_login_detail_html(uid, name):
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-icon lucide-loader"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
         </div>
         <div id="shows-container" class="item-list" style="display:none;"></div>
-        <div id="empty-state" style="display:none; text-align:center; padding: 60px 20px; color: #666;"></div>
+        <div id="empty-state" style="display:none; justify-content:center; align-items:center; height: 60vh; color: #888; font-size: 15px; font-weight: 500;"></div>
     </div>
 
     <script>
@@ -641,28 +642,14 @@ def get_login_detail_html(uid, name):
                         </div>
                     `).join('');
                 }} else {{
-                    document.getElementById('empty-state').style.display = 'block';
-                    document.getElementById('empty-state').style.padding = '0';
-                    document.getElementById('empty-state').innerHTML = `
-                        <div style="background: #fff; border-radius: 10px; padding: 40px 20px; border: 1px solid #ddd;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                            <h4 style="margin: 15px 0 5px; color:#1c1e21; font-size: 16px;">No items found...</h4>
-                            <p style="margin: 0; color: #888; font-size: 14px;">${{data.message || 'There are no published shows.'}}</p>
-                        </div>
-                    `;
+                    document.getElementById('empty-state').style.display = 'flex';
+                    document.getElementById('empty-state').innerHTML = 'No items found...';
                 }}
             }} catch(e) {{
                 console.error(e);
                 document.getElementById('loader').style.display = 'none';
-                document.getElementById('empty-state').style.display = 'block';
-                document.getElementById('empty-state').style.padding = '0';
-                document.getElementById('empty-state').innerHTML = `
-                    <div style="background: #fff; border-radius: 10px; padding: 40px 20px; border: 1px solid #ddd;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                        <h4 style="margin: 15px 0 5px; color:#1c1e21; font-size: 16px;">No items found...</h4>
-                        <p style="margin: 0; color: #888; font-size: 14px;">Error fetching shows</p>
-                    </div>
-                `;
+                document.getElementById('empty-state').style.display = 'flex';
+                document.getElementById('empty-state').innerHTML = 'No items found...';
             }}
         }}
         
