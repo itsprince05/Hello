@@ -204,6 +204,7 @@ def get_dashboard_html():
     <div class="tabs">
         <div class="tab active" onclick="switchTab('all-show', event)">All Show</div>
         <div class="tab" onclick="switchTab('add-show', event)">Add Show</div>
+        <div class="tab" onclick="switchTab('login', event)">Login</div>
     </div>
 
     <!-- TAB 1: ALL SHOW -->
@@ -229,6 +230,18 @@ def get_dashboard_html():
                 <input type="text" id="add-show-rj-uid" placeholder="RJ UID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
                 <input type="text" id="add-show-rj-token" placeholder="RJ Refresh Token" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
                 <button onclick="submitAddShow()" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Add Show</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: LOGIN -->
+    <div id="login" class="container">
+        <div class="card">
+            <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">Login</h3>
+            <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
+                <input type="email" id="login-email" placeholder="Email ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="password" id="login-password" placeholder="Password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <button onclick="submitLogin()" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Login</button>
             </div>
         </div>
     </div>
@@ -321,6 +334,16 @@ def get_dashboard_html():
                     alert("Failed to add show.");
                 }
             } catch(e) { console.error(e); }
+        }
+
+        function submitLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            if(!email || !password) {
+                alert("Please enter both Email ID and Password.");
+                return;
+            }
+            alert("Login functionality not yet integrated. Email: " + email);
         }
 
         async function loadShows() {
