@@ -415,7 +415,9 @@ def get_dashboard_html():
                 }
                 
                 container.innerHTML = data.logins.map(l => {
-                    return `<div class="card" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.location.href='/login/${encodeURIComponent(l.uid)}'">
+                    const now = Math.floor(Date.now() / 1000);
+                    const isExpired = l.expires_at <= now;
+                    return `<div class="card" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: ${isExpired ? 'default' : 'pointer'}; ${isExpired ? 'opacity: 0.6;' : ''}" ${isExpired ? '' : `onclick="window.location.href='/login/${encodeURIComponent(l.uid)}'"`}>
                         <div>
                             <div style="font-weight: 600; font-size: 15px; color: #1c1e21;">${l.name}</div>
                             <div style="font-size: 13px; margin-top: 5px;" class="countdown-timer" data-expires="${l.expires_at}"></div>
