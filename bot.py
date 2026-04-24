@@ -770,8 +770,8 @@ def get_login_detail_html(uid, name):
                     if (data.debug) {{
                         htmlContent += `
                         <div style="text-align: left; background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-top: 15px; font-family: monospace; font-size: 12px; overflow-x: auto;">
-                            <strong style="color: #2481cc;">Request Headers:</strong>
-                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{JSON.stringify(data.debug.request_headers, null, 2)}}</pre>
+                            <strong style="color: #2481cc;">Request cURL:</strong>
+                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{data.debug.curl_command}}</pre>
                             <hr style="border:none; border-top:1px solid #eee; margin:10px 0;">
                             <strong style="color: #2481cc;">Response Body:</strong>
                             <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{data.debug.response_body}}</pre>
@@ -1043,33 +1043,38 @@ def api_logins_shows(uid):
     }
     
     req = urllib.request.Request(url, headers=headers)
-    log_msg = f"User Shows Request to: {url}\\nHeaders: {json.dumps(headers, indent=2)}\\n"
+    
+    curl_cmd = f"curl '{url}'"
+    for k, v in headers.items():
+        curl_cmd += f" \\\n  -H '{k}: {v}'"
+        
+    log_msg = f"User Shows Request cURL:\n{curl_cmd}\n"
     
     try:
         with urllib.request.urlopen(req) as response:
             resp_body = response.read().decode()
-            log_msg += f"Response Code: {response.getcode()}\\nResponse Body: {resp_body}"
+            log_msg += f"Response Code: {response.getcode()}\nResponse Body: {resp_body}"
             add_log("API", log_msg)
             try:
                 res_json = json.loads(resp_body)
             except:
                 res_json = {"status": 0, "message": "Invalid JSON response"}
-            res_json["debug"] = {"request_headers": headers, "response_body": resp_body}
+            res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
             return jsonify(res_json)
     except urllib.error.HTTPError as e:
         resp_body = e.read().decode()
-        log_msg += f"Response Error Code: {e.code}\\nResponse Error Body: {resp_body}"
+        log_msg += f"Response Error Code: {e.code}\nResponse Error Body: {resp_body}"
         add_log("API", log_msg)
         try:
             res_json = json.loads(resp_body)
-            res_json["debug"] = {"request_headers": headers, "response_body": resp_body}
+            res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
             return jsonify(res_json), e.code
         except:
-            return jsonify({"status": 0, "message": str(e), "debug": {"request_headers": headers, "response_body": resp_body}}), e.code
+            return jsonify({"status": 0, "message": str(e), "debug": {"curl_command": curl_cmd, "response_body": resp_body}}), e.code
     except Exception as e:
         log_msg += f"Exception: {str(e)}"
         add_log("API", log_msg)
-        return jsonify({"status": 0, "message": str(e), "debug": {"request_headers": headers, "response_body": str(e)}}), 500
+        return jsonify({"status": 0, "message": str(e), "debug": {"curl_command": curl_cmd, "response_body": str(e)}}), 500
 
 
 @flask_app.route("/login/<path:uid>")
