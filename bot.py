@@ -1041,7 +1041,7 @@ def api_get_logins():
 
 @flask_app.route("/api/logins/<path:uid>/items", methods=["GET"])
 def api_logins_shows(uid):
-    import urllib.request, urllib.error, json
+    import json
     
     login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
     if not login:
@@ -1077,23 +1077,20 @@ def api_logins_shows(uid):
     log_msg = f"User Shows Request cURL:\n{curl_cmd}\n"
     
     try:
-        import subprocess
-        curl_args = ["curl", "-sL", "--compressed", url]
-        for k, v in headers.items():
-            curl_args.extend(["-H", f"{k}: {v}"])
-            
-        result = subprocess.run(curl_args, capture_output=True, text=True)
-        resp_body = result.stdout
+        import requests as req_lib
+        session = req_lib.Session()
+        resp = session.get(url, headers=headers, timeout=30)
+        resp_body = resp.text
         
-        log_msg += f"Curl Exit Code: {result.returncode}\nResponse Body: {resp_body}"
+        log_msg += f"Status Code: {resp.status_code}\nResponse Body: {resp_body}"
         add_log("API", log_msg)
         
         try:
-            res_json = json.loads(resp_body)
+            res_json = resp.json()
         except:
-            res_json = {"status": 0, "message": f"Invalid JSON response. stderr: {result.stderr}"}
+            res_json = {"status": 0, "message": f"Invalid JSON. Status: {resp.status_code}. Body: {resp_body[:500]}"}
             
-        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body or result.stderr}
+        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
         return jsonify(res_json)
     except Exception as e:
         log_msg += f"Exception: {str(e)}"
