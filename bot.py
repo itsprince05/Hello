@@ -1070,38 +1070,28 @@ def api_logins_shows(uid):
         "web-platform": "studio"
     }
     
-    curl_cmd = f"curl '{url}'"
+    curl_parts = [f"curl -sL --compressed --max-time 30 '{url}'"]
     for k, v in headers.items():
-        curl_cmd += f" \\\n  -H '{k}: {v}'"
+        safe_v = v.replace("'", "'\\''")
+        curl_parts.append(f"-H '{k}: {safe_v}'")
+    curl_cmd = " \\\n  ".join(curl_parts)
         
     log_msg = f"User Shows Request cURL:\n{curl_cmd}\n"
     
     try:
-        import http.client, ssl
+        result = subprocess.run(curl_cmd, shell=True, capture_output=True, text=True, timeout=35)
+        resp_body = result.stdout
+        resp_stderr = result.stderr
         
-        context = ssl.create_default_context()
-        conn = http.client.HTTPSConnection("api.studio.pocketfm.com", context=context)
-        path = "/v2/content_api/book.published_shows?is_novel=0"
-        
-        conn.putrequest("GET", path, skip_host=True)
-        conn.putheader("Host", "api.studio.pocketfm.com")
-        for k, v in headers.items():
-            conn.putheader(k, v)
-        conn.endheaders()
-        
-        resp = conn.getresponse()
-        resp_body = resp.read().decode("utf-8", errors="ignore")
-        
-        log_msg += f"Status Code: {resp.status}\nResponse Body: {resp_body}"
+        log_msg += f"Exit Code: {result.returncode}\nstdout: {resp_body}\nstderr: {resp_stderr}"
         add_log("API", log_msg)
-        conn.close()
         
         try:
             res_json = json.loads(resp_body)
         except:
-            res_json = {"status": 0, "message": f"Invalid JSON. Status: {resp.status}. Body: {resp_body[:500]}"}
+            res_json = {"status": 0, "message": f"Invalid JSON. Exit: {result.returncode}. stdout: {resp_body[:500]}. stderr: {resp_stderr[:500]}"}
             
-        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
+        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body or resp_stderr}
         return jsonify(res_json)
     except Exception as e:
         log_msg += f"Exception: {str(e)}"
