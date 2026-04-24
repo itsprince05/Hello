@@ -926,7 +926,7 @@ def restart_tunnel():
     tunnel_url_ready.wait(timeout=30)
 
 
-# ─── FLASK DASHBOARD ─────────────────────────────────────────────────────────
+# ─── FLASK DASHBOARDs ─────────────────────────────────────────────────────────
 flask_app = Flask(__name__)
 flask_app.secret_key = generate_password(32)
 
