@@ -239,9 +239,10 @@ def get_dashboard_html():
         <div class="card">
             <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">Login</h3>
             <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
-                <input type="email" id="login-email" placeholder="Email ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="password" id="login-password" placeholder="Password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <button onclick="submitLogin()" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Login</button>
+                <input type="email" id="login-email" value="anand0687@gmail.com" placeholder="Email ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="password" id="login-password" value="17@Test" placeholder="Password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <button onclick="submitLogin(this)" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Login</button>
+                <div id="login-response" style="margin-top: 10px; font-size: 13px; color: #333; word-wrap: break-word; white-space: pre-wrap; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: none; max-height: 200px; overflow-y: auto;"></div>
             </div>
         </div>
     </div>
@@ -336,14 +337,40 @@ def get_dashboard_html():
             } catch(e) { console.error(e); }
         }
 
-        function submitLogin() {
+        async function submitLogin(btn) {
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
+            const responseDiv = document.getElementById('login-response');
+            
             if(!email || !password) {
                 alert("Please enter both Email ID and Password.");
                 return;
             }
-            alert("Login functionality not yet integrated. Email: " + email);
+            
+            btn.disabled = true;
+            btn.textContent = 'Logging in...';
+            responseDiv.style.display = 'none';
+            responseDiv.textContent = '';
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                
+                responseDiv.style.display = 'block';
+                responseDiv.textContent = JSON.stringify(data, null, 2);
+                
+            } catch(e) { 
+                console.error(e);
+                responseDiv.style.display = 'block';
+                responseDiv.textContent = 'Error: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Login';
+            }
         }
 
         async function loadShows() {
@@ -741,6 +768,47 @@ def api_shows():
         
     safe_shows = [{"id": s.get("id"), "name": s.get("name"), "image": s.get("image")} for s in shows_list]
     return jsonify({"shows": safe_shows})
+
+
+@flask_app.route("/api/login", methods=["POST"])
+def api_login():
+    import urllib.request, urllib.error, json
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
+    
+    url = "https://iam-cms.pocketfm.com/v1/studio/auth/users/login/email"
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "en-US,en;q=0.9,hi;q=0.8",
+        "app-name": "pocket_studio",
+        "content-type": "application/json",
+        "origin": "https://partner.pocketfm.com",
+        "platform": "web",
+        "priority": "u=1, i",
+        "referer": "https://partner.pocketfm.com/",
+        "sec-ch-ua": '"Microsoft Edge";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0"
+    }
+    
+    payload = json.dumps({"email": email, "password": password}).encode("utf-8")
+    req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            return jsonify(json.loads(response.read().decode()))
+    except urllib.error.HTTPError as e:
+        try:
+            return jsonify(json.loads(e.read().decode())), e.code
+        except:
+            return jsonify({"error": str(e)}), e.code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @flask_app.route("/api/shows/<path:show_id>", methods=["DELETE"])
