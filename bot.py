@@ -260,8 +260,8 @@ def get_dashboard_html():
         <div class="card">
             <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">Login</h3>
             <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
-                <input type="email" id="login-email" value="anand0687@gmail.com" placeholder="Email ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="password" id="login-password" value="17@Test" placeholder="Password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="email" id="login-email" placeholder="Email ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
+                <input type="password" id="login-password" placeholder="Password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
                 <button onclick="submitLogin(this)" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Login</button>
                 <div id="login-error" style="display:none; color: #fa5252; font-weight: 600; font-size: 14px; text-align: center;">Incorrect Details</div>
                 <div id="login-response" style="margin-top: 10px; font-size: 13px; color: #333; word-wrap: break-word; white-space: pre-wrap; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: none; max-height: 200px; overflow-y: auto;"></div>
@@ -274,9 +274,8 @@ def get_dashboard_html():
     <!-- DELETE POPUP -->
     <div id="delete-popup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
         <div style="background:#fff; padding:20px; border-radius:12px; width:calc(100% - 40px); max-width:320px; box-sizing:border-box;">
-            <h3 style="margin-top:0; color:#1c1e21;">Delete Show</h3>
-            <p style="font-size:14px; color:#666; margin-bottom:15px;">Type <strong>delete</strong> to confirm...</p>
-            <input type="text" id="delete-confirm-input" placeholder="Type here..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; margin-bottom:15px; font-family:inherit; font-size:14px; outline:none;">
+            <h3 style="margin-top:0; color:#1c1e21;">Confirm Delete</h3>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">Are you sure you want to delete this?</p>
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button onclick="hideDeletePopup()" style="padding:10px 15px; background:#f0f2f5; color:#333; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Cancel</button>
                 <button id="delete-btn-submit" onclick="confirmDelete()" style="padding:10px 15px; background:#fa5252; color:#fff; border:none; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:500;">Delete</button>
@@ -416,9 +415,14 @@ def get_dashboard_html():
                 }
                 
                 container.innerHTML = data.logins.map(l => {
-                    return `<div class="card" style="margin-bottom: 0;">
-                        <div style="font-weight: 600; font-size: 15px; color: #1c1e21;">${l.name}</div>
-                        <div style="font-size: 13px; color: #666; margin-top: 5px;">Expired in: <span class="countdown-timer" data-expires="${l.expires_at}" style="font-weight: bold; color: #2481cc;"></span></div>
+                    return `<div class="card" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 15px; color: #1c1e21;">${l.name}</div>
+                            <div style="font-size: 13px; color: #666; margin-top: 5px;">Expired in: <span class="countdown-timer" data-expires="${l.expires_at}" style="font-weight: bold; color: #2481cc;"></span></div>
+                        </div>
+                        <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('${l.uid}', 'login'); event.stopPropagation();">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </div>
                     </div>`;
                 }).join('');
                 updateTimers();
@@ -479,12 +483,13 @@ def get_dashboard_html():
             } catch(e) { console.error(e); }
         }
 
-        let showToDelete = null;
+        let itemToDeleteId = null;
+        let itemToDeleteType = null;
         let deleteTimerInterval = null;
 
-        function showDeletePopup(id) {
-            showToDelete = id;
-            document.getElementById('delete-confirm-input').value = '';
+        function showDeletePopup(id, type='show') {
+            itemToDeleteId = id;
+            itemToDeleteType = type;
             document.getElementById('delete-popup').style.display = 'flex';
             
             const btn = document.getElementById('delete-btn-submit');
@@ -493,7 +498,7 @@ def get_dashboard_html():
             btn.style.cursor = 'not-allowed';
             
             if(deleteTimerInterval) clearInterval(deleteTimerInterval);
-            let counter = 10;
+            let counter = 5;
             btn.textContent = `Delete (${counter})`;
             
             deleteTimerInterval = setInterval(() => {
@@ -512,25 +517,26 @@ def get_dashboard_html():
 
         function hideDeletePopup() {
             document.getElementById('delete-popup').style.display = 'none';
-            showToDelete = null;
+            itemToDeleteId = null;
+            itemToDeleteType = null;
             if(deleteTimerInterval) clearInterval(deleteTimerInterval);
         }
 
         async function confirmDelete() {
-            const val = document.getElementById('delete-confirm-input').value;
-            if(val.toLowerCase() !== 'delete') {
-                alert('Please type delete to confirm.');
-                return;
-            }
-            if(!showToDelete) return;
+            if(!itemToDeleteId) return;
             
             try {
-                const res = await fetch(`/api/shows/${encodeURIComponent(showToDelete)}`, { method: 'DELETE' });
+                let url = itemToDeleteType === 'login' ? `/api/logins/${encodeURIComponent(itemToDeleteId)}` : `/api/shows/${encodeURIComponent(itemToDeleteId)}`;
+                const res = await fetch(url, { method: 'DELETE' });
                 if(res.ok) {
                     hideDeletePopup();
-                    window.location.reload();
+                    if (itemToDeleteType === 'login') {
+                        loadLogins();
+                    } else {
+                        window.location.reload();
+                    }
                 } else {
-                    alert('Failed to delete show.');
+                    alert('Failed to delete.');
                 }
             } catch(e) { console.error(e); }
         }
@@ -901,6 +907,14 @@ def api_login():
 @flask_app.route("/api/logins", methods=["GET"])
 def api_get_logins():
     return jsonify({"logins": logins_list})
+
+
+@flask_app.route("/api/logins/<path:uid>", methods=["DELETE"])
+def api_logins_delete(uid):
+    global logins_list
+    logins_list = [l for l in logins_list if str(l.get("uid")) != uid]
+    save_logins(logins_list)
+    return jsonify({"status": "success"})
 
 
 @flask_app.route("/api/shows/<path:show_id>", methods=["DELETE"])
