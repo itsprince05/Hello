@@ -753,8 +753,8 @@ def get_login_detail_html(uid, name):
         @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
         .lucide-loader {{ animation: spin 1s linear infinite; width: 32px; height: 32px; }}
         
-        .item-list {{ display: flex; flex-direction: column; gap: 0; }}
-        .item {{ display:flex; gap:0; align-items:flex-start; background:#fff; overflow:hidden; border-bottom: 1px solid #e0e0e0; }}
+        .item-list {{ display: flex; flex-direction: column; gap: 15px; }}
+        .item {{ display:flex; gap:10px; align-items:center; background:#fff; border-radius:10px; overflow:hidden; }}
     </style>
 </head>
 <body>
@@ -781,28 +781,40 @@ def get_login_detail_html(uid, name):
                 
                 document.getElementById('loader').style.display = 'none';
                 
-                if(data.items && data.items.length > 0) {{
+                if(res.ok && data.status === 1 && data.result && data.result.books && data.result.books.length > 0) {{
                     const container = document.getElementById('shows-container');
                     container.style.display = 'flex';
-                    container.innerHTML = data.items.map(b => `
+                    container.innerHTML = data.result.books.map(b => `
                         <div class="item">
-                            <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                            <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius: 8px; overflow:hidden;">
                                 ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
-                            <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px;">
+                            <div style="display:flex; flex-direction:column; overflow:hidden; justify-content:center;">
                                 <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
                             </div>
                         </div>
                     `).join('');
                 }} else {{
                     document.getElementById('empty-state').style.display = 'block';
-                    document.getElementById('empty-state').innerHTML = `<p style="color:#888;">No items found...</p>`;
+                    let htmlContent = `<p style="color:#fa5252; font-weight:600;">Error: ${{data.message || 'No published shows'}}</p>`;
+                    if (data.debug) {{
+                        htmlContent += `
+                        <div style="text-align: left; background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-top: 15px; font-family: monospace; font-size: 12px; overflow-x: auto;">
+                            <strong style="color: #2481cc;">Request cURL:</strong>
+                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{data.debug.curl_command}}</pre>
+                            <hr style="border:none; border-top:1px solid #eee; margin:10px 0;">
+                            <strong style="color: #2481cc;">Response Body:</strong>
+                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{data.debug.response_body}}</pre>
+                        </div>
+                        `;
+                    }}
+                    document.getElementById('empty-state').innerHTML = htmlContent;
                 }}
             }} catch(e) {{
                 console.error(e);
                 document.getElementById('loader').style.display = 'none';
                 document.getElementById('empty-state').style.display = 'block';
-                document.getElementById('empty-state').innerHTML = `<p style="color:#fa5252">Error loading items</p>`;
+                document.getElementById('empty-state').innerHTML = `<p style="color:#fa5252">Error fetching shows</p>`;
             }}
         }}
         
@@ -1093,19 +1105,12 @@ def api_logins_shows(uid):
         add_log("API", log_msg)
         
         try:
-            full_json = json.loads(resp_body)
+            res_json = json.loads(resp_body)
         except:
-            return jsonify({"items": []})
-        
-        items = []
-        if full_json.get("status") == 1 and full_json.get("result", {}).get("books"):
-            for b in full_json["result"]["books"]:
-                items.append({
-                    "show_id": b.get("show_id", ""),
-                    "show_title": b.get("show_title", ""),
-                    "image_url": b.get("image_url", "")
-                })
-        return jsonify({"items": items})
+            res_json = {"status": 0, "message": f"Invalid JSON from API. Proxy status: {resp_status}. Body: {resp_body[:500]}"}
+            
+        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
+        return jsonify(res_json)
     except urllib.error.HTTPError as e:
         err_body = e.read().decode()
         log_msg += f"Proxy HTTP Error: {e.code}\nBody: {err_body}"
