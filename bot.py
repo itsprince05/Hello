@@ -119,7 +119,7 @@ def get_dashboard_html():
         empty_display = "none"
         list_display = "flex"
         shows_rendered = "".join([
-            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/show/{__import__('urllib').parse.quote(str(s.get('id', '')))}'">
+            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/item/{__import__('urllib').parse.quote(str(s.get('id', '')))}'">
                 <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
                     <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                         {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
@@ -342,7 +342,7 @@ def get_dashboard_html():
             }
 
             try {
-                const res = await fetch('/api/shows', {
+                const res = await fetch('/api/items', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -452,7 +452,7 @@ def get_dashboard_html():
 
         async function loadShows() {
             try {
-                const res = await fetch('/api/shows');
+                const res = await fetch('/api/items');
                 const data = await res.json();
                 
                 const listContainer = document.getElementById('shows-list');
@@ -462,7 +462,7 @@ def get_dashboard_html():
                     emptyState.style.display = 'none';
                     listContainer.style.display = 'flex';
                     listContainer.innerHTML = data.shows.map(s => 
-                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/show/${encodeURIComponent(s.id)}'">
+                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/item/${encodeURIComponent(s.id)}'">
                             <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
                                 <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                                     ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
@@ -526,7 +526,7 @@ def get_dashboard_html():
             if(!itemToDeleteId) return;
             
             try {
-                let url = itemToDeleteType === 'login' ? `/api/logins/${encodeURIComponent(itemToDeleteId)}` : `/api/shows/${encodeURIComponent(itemToDeleteId)}`;
+                let url = itemToDeleteType === 'login' ? `/api/logins/${encodeURIComponent(itemToDeleteId)}` : `/api/items/${encodeURIComponent(itemToDeleteId)}`;
                 const res = await fetch(url, { method: 'DELETE' });
                 if(res.ok) {
                     hideDeletePopup();
@@ -659,7 +659,7 @@ def get_show_detail_html(show):
             const showIdEncoded = encodeURIComponent(showIdStr);
 
             try {{
-                const res = await fetch(`/api/shows/${{showIdEncoded}}/fetch`, {{
+                const res = await fetch(`/api/items/${{showIdEncoded}}/fetch`, {{
                     method: 'POST',
                     headers: {{ 'Content-Type': 'application/json' }},
                     body: JSON.stringify({{ tab: tab }})
@@ -721,7 +721,7 @@ def get_login_detail_html(uid, name):
         .container {{ max-width: 800px; margin: 0 auto; padding: 15px; }}
         .loader-container {{ display: flex; justify-content: center; align-items: center; height: 60vh; color: #2481cc; }}
         @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
-        .lucide-loader {{ animation: spin 1s linear infinite; width: 48px; height: 48px; }}
+        .lucide-loader {{ animation: spin 1s linear infinite; width: 32px; height: 32px; }}
         
         .item-list {{ display: flex; flex-direction: column; gap: 15px; }}
         .item {{ display:flex; gap:10px; align-items:center; background:#fff; padding:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; }}
@@ -746,7 +746,7 @@ def get_login_detail_html(uid, name):
     <script>
         async function loadUserShows() {{
             try {{
-                const res = await fetch(`/api/logins/{uid_esc}/shows`);
+                const res = await fetch(`/api/logins/{uid_esc}/items`);
                 const data = await res.json();
                 
                 document.getElementById('loader').style.display = 'none';
@@ -901,7 +901,7 @@ def index():
     return get_dashboard_html()
 
 
-@flask_app.route("/show/<path:show_id>")
+@flask_app.route("/item/<path:show_id>")
 def show_detail(show_id):
     show = next((s for s in shows_list if str(s.get("id")) == show_id), None)
     if not show:
@@ -920,7 +920,7 @@ def api_stats():
     })
 
 
-@flask_app.route("/api/shows", methods=["GET", "POST"])
+@flask_app.route("/api/items", methods=["GET", "POST"])
 def api_shows():
     if request.method == "POST":
         data = request.json
@@ -999,7 +999,7 @@ def api_get_logins():
     return jsonify({"logins": safe_logins})
 
 
-@flask_app.route("/api/logins/<path:uid>/shows", methods=["GET"])
+@flask_app.route("/api/logins/<path:uid>/items", methods=["GET"])
 def api_logins_shows(uid):
     import urllib.request, urllib.error, json
     
@@ -1031,15 +1031,25 @@ def api_logins_shows(uid):
     }
     
     req = urllib.request.Request(url, headers=headers)
+    log_msg = f"User Shows Request to: {url}\\nHeaders: {json.dumps(headers, indent=2)}\\n"
+    
     try:
         with urllib.request.urlopen(req) as response:
-            return jsonify(json.loads(response.read().decode()))
+            resp_body = response.read().decode()
+            log_msg += f"Response Code: {response.getcode()}\\nResponse Body: {resp_body}"
+            add_log("API", log_msg)
+            return jsonify(json.loads(resp_body))
     except urllib.error.HTTPError as e:
+        resp_body = e.read().decode()
+        log_msg += f"Response Error Code: {e.code}\\nResponse Error Body: {resp_body}"
+        add_log("API", log_msg)
         try:
-            return jsonify(json.loads(e.read().decode())), e.code
+            return jsonify(json.loads(resp_body)), e.code
         except:
             return jsonify({"status": 0, "message": str(e)}), e.code
     except Exception as e:
+        log_msg += f"Exception: {str(e)}"
+        add_log("API", log_msg)
         return jsonify({"status": 0, "message": str(e)}), 500
 
 
@@ -1058,7 +1068,7 @@ def api_logins_delete(uid):
     return jsonify({"status": "success"})
 
 
-@flask_app.route("/api/shows/<path:show_id>", methods=["DELETE"])
+@flask_app.route("/api/items/<path:show_id>", methods=["DELETE"])
 def api_shows_delete(show_id):
     global shows_list
     shows_list = [s for s in shows_list if str(s.get("id")) != show_id]
@@ -1066,7 +1076,7 @@ def api_shows_delete(show_id):
     return jsonify({"status": "success"})
 
 
-@flask_app.route("/api/shows/<path:show_id>/fetch", methods=["POST"])
+@flask_app.route("/api/items/<path:show_id>/fetch", methods=["POST"])
 def api_shows_fetch(show_id):
     import urllib.request, urllib.error, json
     global shows_list
