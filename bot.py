@@ -424,7 +424,7 @@ def get_dashboard_html():
 </body>
 </html>'''
 
-    return html.replace("{{EMPTY_DISPLAY}}", empty_display).replace("{{LIST_DISPLAY}}", list_display).replace("{{SHOWS_LIST}}", shows_rendered)
+    return html
 
 
 def get_show_detail_html(show):
