@@ -926,7 +926,7 @@ def restart_tunnel():
     tunnel_url_ready.wait(timeout=30)
 
 
-# ─── FLASK DASHBOARDs ─────────────────────────────────────────────────────────
+# ─── FLASK DASHBOARD ─────────────────────────────────────────────────────────
 flask_app = Flask(__name__)
 flask_app.secret_key = generate_password(32)
 
@@ -1077,18 +1077,29 @@ def api_logins_shows(uid):
     log_msg = f"User Shows Request cURL:\n{curl_cmd}\n"
     
     try:
-        import requests as req_lib
-        session = req_lib.Session()
-        resp = session.get(url, headers=headers, timeout=30)
-        resp_body = resp.text
+        import http.client, ssl
         
-        log_msg += f"Status Code: {resp.status_code}\nResponse Body: {resp_body}"
+        context = ssl.create_default_context()
+        conn = http.client.HTTPSConnection("api.studio.pocketfm.com", context=context)
+        path = "/v2/content_api/book.published_shows?is_novel=0"
+        
+        conn.putrequest("GET", path, skip_host=True)
+        conn.putheader("Host", "api.studio.pocketfm.com")
+        for k, v in headers.items():
+            conn.putheader(k, v)
+        conn.endheaders()
+        
+        resp = conn.getresponse()
+        resp_body = resp.read().decode("utf-8", errors="ignore")
+        
+        log_msg += f"Status Code: {resp.status}\nResponse Body: {resp_body}"
         add_log("API", log_msg)
+        conn.close()
         
         try:
-            res_json = resp.json()
+            res_json = json.loads(resp_body)
         except:
-            res_json = {"status": 0, "message": f"Invalid JSON. Status: {resp.status_code}. Body: {resp_body[:500]}"}
+            res_json = {"status": 0, "message": f"Invalid JSON. Status: {resp.status}. Body: {resp_body[:500]}"}
             
         res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
         return jsonify(res_json)
