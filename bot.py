@@ -258,7 +258,7 @@ def get_dashboard_html():
         <div id="saved-logins-list" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
 
         <div class="card">
-            <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">Login</h3>
+            <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">New Login</h3>
             <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
                 <input type="email" id="login-email" placeholder="Email ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
                 <input type="password" id="login-password" placeholder="Password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
@@ -418,7 +418,7 @@ def get_dashboard_html():
                     return `<div class="card" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.location.href='/login/${encodeURIComponent(l.uid)}'">
                         <div>
                             <div style="font-weight: 600; font-size: 15px; color: #1c1e21;">${l.name}</div>
-                            <div style="font-size: 13px; color: #666; margin-top: 5px;">Expired in: <span class="countdown-timer" data-expires="${l.expires_at}" style="font-weight: bold; color: #2481cc;"></span></div>
+                            <div style="font-size: 13px; margin-top: 5px;" class="countdown-timer" data-expires="${l.expires_at}"></div>
                         </div>
                         <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('${l.uid}', 'login'); event.stopPropagation();">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -436,14 +436,14 @@ def get_dashboard_html():
                 const diff = expiresAt - now;
                 
                 if (diff <= 0) {
-                    el.textContent = "Expired";
+                    el.textContent = "Login expired...";
                     el.style.color = "#fa5252";
                 } else {
                     const hrs = Math.floor(diff / 3600);
                     const mins = Math.floor((diff % 3600) / 60);
                     const secs = diff % 60;
-                    el.textContent = `${hrs}h ${mins}m ${secs}s`;
-                    el.style.color = "#2481cc";
+                    el.innerHTML = `Login expired in - <span style="font-weight: bold; color: #2481cc;">${hrs}h ${mins}m ${secs}s</span>`;
+                    el.style.color = "#666";
                 }
             });
         }
