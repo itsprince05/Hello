@@ -751,7 +751,7 @@ def get_login_detail_html(uid, name):
                 
                 document.getElementById('loader').style.display = 'none';
                 
-                if(data.status === 1 && data.result && data.result.books && data.result.books.length > 0) {{
+                if(res.ok && data.status === 1 && data.result && data.result.books && data.result.books.length > 0) {{
                     const container = document.getElementById('shows-container');
                     container.style.display = 'flex';
                     container.innerHTML = data.result.books.map(b => `
@@ -766,7 +766,19 @@ def get_login_detail_html(uid, name):
                     `).join('');
                 }} else {{
                     document.getElementById('empty-state').style.display = 'block';
-                    document.getElementById('empty-state').innerHTML = `<p>${{data.message || 'No published shows'}}</p>`;
+                    let htmlContent = `<p style="color:#fa5252; font-weight:600;">Error: ${{data.message || 'No published shows'}}</p>`;
+                    if (data.debug) {{
+                        htmlContent += `
+                        <div style="text-align: left; background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-top: 15px; font-family: monospace; font-size: 12px; overflow-x: auto;">
+                            <strong style="color: #2481cc;">Request Headers:</strong>
+                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{JSON.stringify(data.debug.request_headers, null, 2)}}</pre>
+                            <hr style="border:none; border-top:1px solid #eee; margin:10px 0;">
+                            <strong style="color: #2481cc;">Response Body:</strong>
+                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{data.debug.response_body}}</pre>
+                        </div>
+                        `;
+                    }}
+                    document.getElementById('empty-state').innerHTML = htmlContent;
                 }}
             }} catch(e) {{
                 console.error(e);
@@ -1038,19 +1050,26 @@ def api_logins_shows(uid):
             resp_body = response.read().decode()
             log_msg += f"Response Code: {response.getcode()}\\nResponse Body: {resp_body}"
             add_log("API", log_msg)
-            return jsonify(json.loads(resp_body))
+            try:
+                res_json = json.loads(resp_body)
+            except:
+                res_json = {"status": 0, "message": "Invalid JSON response"}
+            res_json["debug"] = {"request_headers": headers, "response_body": resp_body}
+            return jsonify(res_json)
     except urllib.error.HTTPError as e:
         resp_body = e.read().decode()
         log_msg += f"Response Error Code: {e.code}\\nResponse Error Body: {resp_body}"
         add_log("API", log_msg)
         try:
-            return jsonify(json.loads(resp_body)), e.code
+            res_json = json.loads(resp_body)
+            res_json["debug"] = {"request_headers": headers, "response_body": resp_body}
+            return jsonify(res_json), e.code
         except:
-            return jsonify({"status": 0, "message": str(e)}), e.code
+            return jsonify({"status": 0, "message": str(e), "debug": {"request_headers": headers, "response_body": resp_body}}), e.code
     except Exception as e:
         log_msg += f"Exception: {str(e)}"
         add_log("API", log_msg)
-        return jsonify({"status": 0, "message": str(e)}), 500
+        return jsonify({"status": 0, "message": str(e), "debug": {"request_headers": headers, "response_body": str(e)}}), 500
 
 
 @flask_app.route("/login/<path:uid>")
