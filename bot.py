@@ -57,6 +57,7 @@ activity_logs = []
 MAX_LOGS = 200
 
 SHOWS_FILE = "shows.json"
+LOGINS_FILE = "logins.json"
 
 def load_shows():
     import os, json
@@ -74,6 +75,23 @@ def save_shows(data):
         json.dump(data, f, indent=4)
 
 shows_list = load_shows()
+
+def load_logins():
+    import os, json
+    if os.path.exists(LOGINS_FILE):
+        with open(LOGINS_FILE, 'r') as f:
+            try:
+                return json.load(f)
+            except:
+                return []
+    return []
+
+def save_logins(data):
+    import json
+    with open(LOGINS_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+logins_list = load_logins()
 
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -236,12 +254,16 @@ def get_dashboard_html():
 
     <!-- TAB 3: LOGIN -->
     <div id="login" class="container">
+        <!-- SAVED LOGINS -->
+        <div id="saved-logins-list" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
+
         <div class="card">
             <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">Login</h3>
             <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
                 <input type="email" id="login-email" value="anand0687@gmail.com" placeholder="Email ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
                 <input type="password" id="login-password" value="17@Test" placeholder="Password" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
                 <button onclick="submitLogin(this)" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Login</button>
+                <div id="login-error" style="display:none; color: #fa5252; font-weight: 600; font-size: 14px; text-align: center;">Incorrect Details</div>
                 <div id="login-response" style="margin-top: 10px; font-size: 13px; color: #333; word-wrap: break-word; white-space: pre-wrap; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: none; max-height: 200px; overflow-y: auto;"></div>
             </div>
         </div>
@@ -341,6 +363,7 @@ def get_dashboard_html():
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const responseDiv = document.getElementById('login-response');
+            const errDiv = document.getElementById('login-error');
             
             if(!email || !password) {
                 alert("Please enter both Email ID and Password.");
@@ -351,6 +374,7 @@ def get_dashboard_html():
             btn.textContent = 'Logging in...';
             responseDiv.style.display = 'none';
             responseDiv.textContent = '';
+            errDiv.style.display = 'none';
             
             try {
                 const res = await fetch('/api/login', {
@@ -360,18 +384,67 @@ def get_dashboard_html():
                 });
                 const data = await res.json();
                 
-                responseDiv.style.display = 'block';
-                responseDiv.textContent = JSON.stringify(data, null, 2);
+                if (data.auth_info && data.user_info) {
+                    // Success
+                    responseDiv.style.display = 'none';
+                    document.getElementById('login-email').value = '';
+                    document.getElementById('login-password').value = '';
+                    loadLogins();
+                } else {
+                    // Incorrect Details
+                    errDiv.style.display = 'block';
+                }
                 
             } catch(e) { 
                 console.error(e);
-                responseDiv.style.display = 'block';
-                responseDiv.textContent = 'Error: ' + e.message;
+                errDiv.style.display = 'block';
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Login';
             }
         }
+
+        async function loadLogins() {
+            try {
+                const res = await fetch('/api/logins');
+                const data = await res.json();
+                const container = document.getElementById('saved-logins-list');
+                
+                if (!data.logins || data.logins.length === 0) {
+                    container.innerHTML = '';
+                    return;
+                }
+                
+                container.innerHTML = data.logins.map(l => {
+                    return `<div class="card" style="margin-bottom: 0;">
+                        <div style="font-weight: 600; font-size: 15px; color: #1c1e21;">${l.name}</div>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">Expired in: <span class="countdown-timer" data-expires="${l.expires_at}" style="font-weight: bold; color: #2481cc;"></span></div>
+                    </div>`;
+                }).join('');
+                updateTimers();
+            } catch(e) { console.error(e); }
+        }
+
+        function updateTimers() {
+            document.querySelectorAll('.countdown-timer').forEach(el => {
+                const expiresAt = parseInt(el.getAttribute('data-expires'), 10);
+                const now = Math.floor(Date.now() / 1000);
+                const diff = expiresAt - now;
+                
+                if (diff <= 0) {
+                    el.textContent = "Expired";
+                    el.style.color = "#fa5252";
+                } else {
+                    const hrs = Math.floor(diff / 3600);
+                    const mins = Math.floor((diff % 3600) / 60);
+                    const secs = diff % 60;
+                    el.textContent = `${hrs}h ${mins}m ${secs}s`;
+                    el.style.color = "#2481cc";
+                }
+            });
+        }
+        
+        setInterval(updateTimers, 1000);
 
         async function loadShows() {
             try {
@@ -464,6 +537,7 @@ def get_dashboard_html():
 
         loadStats();
         loadShows();
+        loadLogins();
         setInterval(loadStats, 5000);
     </script>
 </body>
@@ -801,7 +875,20 @@ def api_login():
     
     try:
         with urllib.request.urlopen(req) as response:
-            return jsonify(json.loads(response.read().decode()))
+            res_data = json.loads(response.read().decode())
+            if "auth_info" in res_data and "user_info" in res_data:
+                import time
+                new_login = {
+                    "uid": res_data.get("user_info", {}).get("uid", ""),
+                    "name": res_data.get("user_info", {}).get("full_name", ""),
+                    "access_token": res_data.get("auth_info", {}).get("access_token", ""),
+                    "expires_at": int(time.time()) + 7200  # 2 hours
+                }
+                global logins_list
+                logins_list = [l for l in logins_list if l.get("uid") != new_login["uid"]]
+                logins_list.append(new_login)
+                save_logins(logins_list)
+            return jsonify(res_data)
     except urllib.error.HTTPError as e:
         try:
             return jsonify(json.loads(e.read().decode())), e.code
@@ -809,6 +896,11 @@ def api_login():
             return jsonify({"error": str(e)}), e.code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@flask_app.route("/api/logins", methods=["GET"])
+def api_get_logins():
+    return jsonify({"logins": logins_list})
 
 
 @flask_app.route("/api/shows/<path:show_id>", methods=["DELETE"])
