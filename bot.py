@@ -430,12 +430,20 @@ def get_dashboard_html():
         }
 
         function updateTimers() {
+            const container = document.getElementById('saved-logins-list');
+            if (!container) return;
+            
+            let needsReorder = false;
             document.querySelectorAll('.countdown-timer').forEach(el => {
                 const expiresAt = parseInt(el.getAttribute('data-expires'), 10);
                 const now = Math.floor(Date.now() / 1000);
                 const diff = expiresAt - now;
                 
                 if (diff <= 0) {
+                    if (el.getAttribute('data-is-expired') !== 'true') {
+                        el.setAttribute('data-is-expired', 'true');
+                        needsReorder = true;
+                    }
                     el.textContent = "Login expired...";
                     el.style.color = "#fa5252";
                 } else {
@@ -446,6 +454,26 @@ def get_dashboard_html():
                     el.style.color = "#666";
                 }
             });
+            
+            if (needsReorder) {
+                const cards = Array.from(container.children);
+                cards.sort((a, b) => {
+                    const aTimer = a.querySelector('.countdown-timer');
+                    const bTimer = b.querySelector('.countdown-timer');
+                    if (!aTimer || !bTimer) return 0;
+                    
+                    const aExp = parseInt(aTimer.getAttribute('data-expires'), 10);
+                    const bExp = parseInt(bTimer.getAttribute('data-expires'), 10);
+                    const now = Math.floor(Date.now() / 1000);
+                    const aIsExp = aExp <= now;
+                    const bIsExp = bExp <= now;
+                    
+                    if (aIsExp && !bIsExp) return 1;
+                    if (!aIsExp && bIsExp) return -1;
+                    return aExp - bExp;
+                });
+                cards.forEach(c => container.appendChild(c));
+            }
         }
         
         setInterval(updateTimers, 1000);
@@ -1050,7 +1078,7 @@ def api_logins_shows(uid):
     
     try:
         import subprocess
-        curl_args = ["curl", "-s", url]
+        curl_args = ["curl", "-sL", "--compressed", url]
         for k, v in headers.items():
             curl_args.extend(["-H", f"{k}: {v}"])
             
