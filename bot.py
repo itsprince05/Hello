@@ -53,8 +53,6 @@ tunnel_url = None
 tunnel_process = None
 tunnel_url_ready = threading.Event()
 active_groups = {}
-activity_logs = []
-MAX_LOGS = 200
 
 SHOWS_FILE = "shows.json"
 LOGINS_FILE = "logins.json"
@@ -101,14 +99,7 @@ def generate_password(length=12):
 
 
 def add_log(event_type, details):
-    entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "type": event_type,
-        "details": details,
-    }
-    activity_logs.insert(0, entry)
-    if len(activity_logs) > MAX_LOGS:
-        activity_logs.pop()
+    pass
 
 
 # ─── HTML BUILDER ─────────────────────────────────────────────────────────────
@@ -607,8 +598,9 @@ def get_login_detail_html(uid, name):
         @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
         .lucide-loader {{ animation: spin 1s linear infinite; width: 32px; height: 32px; }}
         
-        .item-list {{ display: flex; flex-direction: column; gap: 15px; }}
-        .item {{ display:flex; gap:10px; align-items:center; background:#fff; border-radius:10px; overflow:hidden; }}
+        .item-list {{ display: flex; flex-direction: column; gap: 0; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }}
+        .item {{ display:flex; gap:0; align-items:flex-start; border-bottom: 1px solid #eee; padding: 0; }}
+        .item:last-child {{ border-bottom: none; }}
     </style>
 </head>
 <body>
@@ -640,35 +632,37 @@ def get_login_detail_html(uid, name):
                     container.style.display = 'flex';
                     container.innerHTML = data.result.books.map(b => `
                         <div class="item">
-                            <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius: 8px; overflow:hidden;">
+                            <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                 ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
-                            <div style="display:flex; flex-direction:column; overflow:hidden; justify-content:center;">
+                            <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px; width: 100%;">
                                 <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
                             </div>
                         </div>
                     `).join('');
                 }} else {{
                     document.getElementById('empty-state').style.display = 'block';
-                    let htmlContent = `<p style="color:#fa5252; font-weight:600;">Error: ${{data.message || 'No published shows'}}</p>`;
-                    if (data.debug) {{
-                        htmlContent += `
-                        <div style="text-align: left; background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-top: 15px; font-family: monospace; font-size: 12px; overflow-x: auto;">
-                            <strong style="color: #2481cc;">Request cURL:</strong>
-                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{data.debug.curl_command}}</pre>
-                            <hr style="border:none; border-top:1px solid #eee; margin:10px 0;">
-                            <strong style="color: #2481cc;">Response Body:</strong>
-                            <pre style="margin-top: 5px; white-space: pre-wrap; word-wrap: break-word;">${{data.debug.response_body}}</pre>
+                    document.getElementById('empty-state').style.padding = '0';
+                    document.getElementById('empty-state').innerHTML = `
+                        <div style="background: #fff; border-radius: 10px; padding: 40px 20px; border: 1px solid #ddd;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            <h4 style="margin: 15px 0 5px; color:#1c1e21; font-size: 16px;">No items found...</h4>
+                            <p style="margin: 0; color: #888; font-size: 14px;">${{data.message || 'There are no published shows.'}}</p>
                         </div>
-                        `;
-                    }}
-                    document.getElementById('empty-state').innerHTML = htmlContent;
+                    `;
                 }}
             }} catch(e) {{
                 console.error(e);
                 document.getElementById('loader').style.display = 'none';
                 document.getElementById('empty-state').style.display = 'block';
-                document.getElementById('empty-state').innerHTML = `<p style="color:#fa5252">Error fetching shows</p>`;
+                document.getElementById('empty-state').style.padding = '0';
+                document.getElementById('empty-state').innerHTML = `
+                    <div style="background: #fff; border-radius: 10px; padding: 40px 20px; border: 1px solid #ddd;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                        <h4 style="margin: 15px 0 5px; color:#1c1e21; font-size: 16px;">No items found...</h4>
+                        <p style="margin: 0; color: #888; font-size: 14px;">Error fetching shows</p>
+                    </div>
+                `;
             }}
         }}
         
@@ -945,8 +939,6 @@ def api_logins_shows(uid):
     for k, v in target_headers.items():
         curl_cmd += f" \\\n  -H '{k}: {v}'"
     
-    log_msg = f"Proxy Request to: {proxy_url}\nTarget: {target_url}\n"
-    
     try:
         req = urllib.request.Request(proxy_url, data=proxy_payload, headers=proxy_headers, method="POST")
         with urllib.request.urlopen(req, timeout=30) as response:
@@ -955,25 +947,25 @@ def api_logins_shows(uid):
         resp_body = proxy_resp.get("body", "")
         resp_status = proxy_resp.get("status", 0)
         
-        log_msg += f"Proxy Response Status: {resp_status}\nBody: {resp_body}"
-        add_log("API", log_msg)
-        
         try:
             res_json = json.loads(resp_body)
+            if res_json.get("status") == 1 and "result" in res_json and "books" in res_json["result"]:
+                filtered_books = []
+                for book in res_json["result"]["books"]:
+                    filtered_books.append({
+                        "show_id": book.get("show_id"),
+                        "show_title": book.get("show_title"),
+                        "image_url": book.get("image_url")
+                    })
+                res_json["result"]["books"] = filtered_books
         except:
-            res_json = {"status": 0, "message": f"Invalid JSON from API. Proxy status: {resp_status}. Body: {resp_body[:500]}"}
+            res_json = {"status": 0, "message": f"Invalid JSON from API. Proxy status: {resp_status}"}
             
-        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
         return jsonify(res_json)
     except urllib.error.HTTPError as e:
-        err_body = e.read().decode()
-        log_msg += f"Proxy HTTP Error: {e.code}\nBody: {err_body}"
-        add_log("API", log_msg)
-        return jsonify({"status": 0, "message": f"Proxy error: {e.code}", "debug": {"curl_command": curl_cmd, "response_body": err_body}}), 502
+        return jsonify({"status": 0, "message": f"Proxy error: {e.code}"}), 502
     except Exception as e:
-        log_msg += f"Exception: {str(e)}"
-        add_log("API", log_msg)
-        return jsonify({"status": 0, "message": str(e), "debug": {"curl_command": curl_cmd, "response_body": str(e)}}), 500
+        return jsonify({"status": 0, "message": str(e)}), 500
 
 
 @flask_app.route("/login/<path:uid>")
