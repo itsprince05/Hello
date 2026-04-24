@@ -144,7 +144,7 @@ def get_dashboard_html():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shows</title>
+    <title>Bot Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { 
@@ -415,7 +415,7 @@ def get_dashboard_html():
                 }
                 
                 container.innerHTML = data.logins.map(l => {
-                    return `<div class="card" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center;">
+                    return `<div class="card" style="margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.location.href='/login/${encodeURIComponent(l.uid)}'">
                         <div>
                             <div style="font-weight: 600; font-size: 15px; color: #1c1e21;">${l.name}</div>
                             <div style="font-size: 13px; color: #666; margin-top: 5px;">Expired in: <span class="countdown-timer" data-expires="${l.expires_at}" style="font-weight: bold; color: #2481cc;"></span></div>
@@ -561,7 +561,7 @@ def get_show_detail_html(show):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{s_name}</title>
+    <title>Bot Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {{ 
@@ -695,6 +695,88 @@ def get_show_detail_html(show):
                 }}
             }}
         }}
+    </script>
+</body>
+</html>'''
+    return html
+
+def get_login_detail_html(uid, name):
+    import html as html_escape
+    s_name = html_escape.escape(name)
+    uid_esc = html_escape.escape(uid)
+    
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {{ font-family: 'Outfit', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; color: #1c1e21; }}
+        .action-bar {{ position: sticky; top: 0; z-index: 100; box-sizing: border-box; height: 48px; background: #2481cc; color: white; padding: 0 10px; gap: 10px; display: flex; align-items: center; }}
+        .back-btn {{ width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; border-radius: 50%; }}
+        .back-btn:hover {{ background: rgba(255,255,255,0.2); }}
+        .navbar-title {{ font-size: 18px; font-weight: 600; letter-spacing: 0.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }}
+        .container {{ max-width: 800px; margin: 0 auto; padding: 15px; }}
+        .loader-container {{ display: flex; justify-content: center; align-items: center; height: 60vh; color: #2481cc; }}
+        @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
+        .lucide-loader {{ animation: spin 1s linear infinite; width: 48px; height: 48px; }}
+        
+        .item-list {{ display: flex; flex-direction: column; gap: 15px; }}
+        .item {{ display:flex; gap:10px; align-items:center; background:#fff; padding:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; }}
+    </style>
+</head>
+<body>
+    <div class="action-bar">
+        <div class="back-btn" onclick="window.history.back()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        </div>
+        <div class="navbar-title">{s_name}</div>
+    </div>
+    
+    <div class="container">
+        <div id="loader" class="loader-container">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-icon lucide-loader"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+        </div>
+        <div id="shows-container" class="item-list" style="display:none;"></div>
+        <div id="empty-state" style="display:none; text-align:center; padding: 60px 20px; color: #666;"></div>
+    </div>
+
+    <script>
+        async function loadUserShows() {{
+            try {{
+                const res = await fetch(`/api/logins/{uid_esc}/shows`);
+                const data = await res.json();
+                
+                document.getElementById('loader').style.display = 'none';
+                
+                if(data.status === 1 && data.result && data.result.books && data.result.books.length > 0) {{
+                    const container = document.getElementById('shows-container');
+                    container.style.display = 'flex';
+                    container.innerHTML = data.result.books.map(b => `
+                        <div class="item">
+                            <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius: 8px; overflow:hidden;">
+                                ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
+                            </div>
+                            <div style="display:flex; flex-direction:column; overflow:hidden; justify-content:center;">
+                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                }} else {{
+                    document.getElementById('empty-state').style.display = 'block';
+                    document.getElementById('empty-state').innerHTML = `<p>${{data.message || 'No published shows'}}</p>`;
+                }}
+            }} catch(e) {{
+                console.error(e);
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'block';
+                document.getElementById('empty-state').innerHTML = `<p style="color:#fa5252">Error fetching shows</p>`;
+            }}
+        }}
+        
+        loadUserShows();
     </script>
 </body>
 </html>'''
@@ -906,8 +988,67 @@ def api_login():
 
 @flask_app.route("/api/logins", methods=["GET"])
 def api_get_logins():
-    return jsonify({"logins": logins_list})
+    import time
+    now = int(time.time())
+    active = [l for l in logins_list if l.get("expires_at", 0) > now]
+    expired = [l for l in logins_list if l.get("expires_at", 0) <= now]
+    active.sort(key=lambda x: x.get("expires_at", 0))
+    expired.sort(key=lambda x: x.get("expires_at", 0))
+    sorted_logins = active + expired
+    safe_logins = [{"uid": l.get("uid"), "name": l.get("name"), "expires_at": l.get("expires_at")} for l in sorted_logins]
+    return jsonify({"logins": safe_logins})
 
+
+@flask_app.route("/api/logins/<path:uid>/shows", methods=["GET"])
+def api_logins_shows(uid):
+    import urllib.request, urllib.error, json
+    
+    login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
+    if not login:
+        return jsonify({"status": 0, "message": "User not found or session expired"}), 404
+        
+    url = "https://api.studio.pocketfm.com/v2/content_api/book.published_shows?is_novel=0"
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "en-US,en;q=0.9",
+        "app-client": "consumer-web",
+        "app-version": "180",
+        "auth-token": "web-auth",
+        "authorization": login.get("access_token", ""),
+        "origin": "https://partner.pocketfm.com",
+        "priority": "u=1, i",
+        "referer": "https://partner.pocketfm.com/",
+        "sec-ch-ua": '"Microsoft Edge";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "source": "studio",
+        "uid": login.get("uid", ""),
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+        "web-platform": "studio"
+    }
+    
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as response:
+            return jsonify(json.loads(response.read().decode()))
+    except urllib.error.HTTPError as e:
+        try:
+            return jsonify(json.loads(e.read().decode())), e.code
+        except:
+            return jsonify({"status": 0, "message": str(e)}), e.code
+    except Exception as e:
+        return jsonify({"status": 0, "message": str(e)}), 500
+
+
+@flask_app.route("/login/<path:uid>")
+def login_page(uid):
+    login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
+    if not login:
+        return "Login not found", 404
+    return get_login_detail_html(uid, login.get("name", "Unknown"))
 
 @flask_app.route("/api/logins/<path:uid>", methods=["DELETE"])
 def api_logins_delete(uid):
