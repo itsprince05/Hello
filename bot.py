@@ -113,32 +113,6 @@ def add_log(event_type, details):
 
 # ─── HTML BUILDER ─────────────────────────────────────────────────────────────
 def get_dashboard_html():
-    import html as html_escape
-    global shows_list
-    if shows_list:
-        empty_display = "none"
-        list_display = "flex"
-        shows_rendered = "".join([
-            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/item/{__import__('urllib').parse.quote(str(s.get('id', '')))}'">
-                <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
-                    <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
-                        {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
-                    </div>
-                    <div style="display:flex; flex-direction:column; margin: 10px 0; overflow:hidden;">
-                        <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">{html_escape.escape(s.get("name", ""))}</div>
-                    </div>
-                </div>
-                <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('{html_escape.escape(s.get("id", ""))}'); event.stopPropagation();">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </div>
-            </div>"""
-            for s in shows_list
-        ])
-    else:
-        empty_display = "block"
-        list_display = "none"
-        shows_rendered = ""
-
     html = '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -163,21 +137,7 @@ def get_dashboard_html():
         .navbar-icon svg { width: 18px; height: 18px; }
         .navbar-title { font-size: 18px; font-weight: 600; color: white; letter-spacing: 0.5px; }
         
-        .tabs { 
-            display: flex; width: 100%; height: 48px; background-color: #2481cc; align-items: center; 
-            position: sticky; top: 0; z-index: 99;
-        }
-        .tab { 
-            flex: 1; height: 100%; display: flex; align-items: center; justify-content: center;
-            font-weight: 500; font-size: 14px; text-transform: none; letter-spacing: 0.5px;
-            color: rgba(255,255,255,0.7); cursor: pointer; 
-            border-bottom: 3px solid transparent; transition: background 0.2s, color 0.2s; 
-        }
-        .tab.active { color: #ffffff; border-bottom-color: #ffffff; background-color: rgba(255, 255, 255, 0.15); }
-        .tab:hover { background-color: rgba(255,255,255,0.1); color: #ffffff; }
-
-        .container { max-width: 800px; margin: 0 auto; padding: 15px; display: none; }
-        .container.active { display: block; }
+        .container { max-width: 800px; margin: 0 auto; padding: 15px; }
 
         .card { 
             background: #ffffff; border-radius: 10px; padding: 15px; border: 1px solid #e0e0e0; 
@@ -219,41 +179,8 @@ def get_dashboard_html():
         </div>
     </div>
     
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('all-show', event)">All Show</div>
-        <div class="tab" onclick="switchTab('add-show', event)">Add Show</div>
-        <div class="tab" onclick="switchTab('login', event)">Login</div>
-    </div>
-
-    <!-- TAB 1: ALL SHOW -->
-    <div id="all-show" class="container active">
-        <div class="card" id="empty-state" style="text-align:center; padding: 60px 20px; color: #666; display:{{EMPTY_DISPLAY}};">
-            <div style="margin-bottom: 15px; color: #aaa;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brush-cleaning-icon lucide-brush-cleaning"><path d="m16 22-1-4"/><path d="M19 14a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1"/><path d="M19 14H5l-1.973 6.767A1 1 0 0 0 4 22h16a1 1 0 0 0 .973-1.233z"/><path d="m8 22 1-4"/></svg>
-            </div>
-            <h4 style="margin:0 0 10px 0; color:#1c1e21; font-weight: 500; font-size: 18px;">Empty List</h4>
-            <p style="font-size: 14px; margin:0; color:#888;">No shows available right now.</p>
-        </div>
-        <div id="shows-list" style="display:{{LIST_DISPLAY}}; flex-direction:column; gap:15px;">{{SHOWS_LIST}}</div>
-    </div>
-
-    <!-- TAB 2: ADD SHOW -->
-    <div id="add-show" class="container">
-        <div class="card">
-            <h3 style="margin-top:0; color:#1c1e21; margin-bottom: 10px;">Add Show</h3>
-            <div style="display:flex; flex-direction:column; gap: 10px; margin-top: 10px;">
-                <input type="text" id="add-show-name" placeholder="Show Name" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-id" placeholder="Show ID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-image" placeholder="Show Image URL" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-rj-uid" placeholder="RJ UID" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <input type="text" id="add-show-rj-token" placeholder="RJ Refresh Token" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: inherit; font-size: 14px; outline: none;">
-                <button onclick="submitAddShow()" style="width: 100%; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Add Show</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- TAB 3: LOGIN -->
-    <div id="login" class="container">
+    <!-- LOGIN CONTAINER -->
+    <div class="container">
         <!-- SAVED LOGINS -->
         <div id="saved-logins-list" style="margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px;"></div>
 
@@ -284,13 +211,6 @@ def get_dashboard_html():
     </div>
 
     <script>
-        function switchTab(tabId, event) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        }
-
         function copyText(text) {
             navigator.clipboard.writeText(text);
             const toast = document.getElementById('toast');
@@ -325,36 +245,6 @@ def get_dashboard_html():
 
                 // No DOM DOM updates for Empty List
 
-            } catch(e) { console.error(e); }
-        }
-
-        async function submitAddShow() {
-            const data = {
-                name: document.getElementById('add-show-name').value,
-                id: document.getElementById('add-show-id').value,
-                image: document.getElementById('add-show-image').value,
-                rj_uid: document.getElementById('add-show-rj-uid').value,
-                rj_token: document.getElementById('add-show-rj-token').value
-            };
-            if(!data.name || !data.id || !data.image || !data.rj_uid || !data.rj_token) {
-                alert("All fields are required...");
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/items', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                if(res.ok) {
-                    ['name', 'id', 'image', 'rj-uid', 'rj-token'].forEach(f => document.getElementById(`add-show-${f}`).value = '');
-                    alert("Show added successfully...");
-                    loadShows();
-                    document.querySelectorAll('.tab')[0].click();
-                } else {
-                    alert("Failed to add show.");
-                }
             } catch(e) { console.error(e); }
         }
 
@@ -480,39 +370,6 @@ def get_dashboard_html():
         
         setInterval(updateTimers, 1000);
 
-        async function loadShows() {
-            try {
-                const res = await fetch('/api/items');
-                const data = await res.json();
-                
-                const listContainer = document.getElementById('shows-list');
-                const emptyState = document.getElementById('empty-state');
-                
-                if(data.shows && data.shows.length > 0) {
-                    emptyState.style.display = 'none';
-                    listContainer.style.display = 'flex';
-                    listContainer.innerHTML = data.shows.map(s => 
-                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/item/${encodeURIComponent(s.id)}'">
-                            <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
-                                <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
-                                    ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
-                                </div>
-                                <div style="display:flex; flex-direction:column; margin: 10px 0; overflow:hidden;">
-                                    <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${s.name}</div>
-                                </div>
-                            </div>
-                            <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('${s.id}'); event.stopPropagation();">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            </div>
-                        </div>`
-                    ).join('');
-                } else {
-                    emptyState.style.display = 'block';
-                    listContainer.style.display = 'none';
-                }
-            } catch(e) { console.error(e); }
-        }
-
         let itemToDeleteId = null;
         let itemToDeleteType = null;
         let deleteTimerInterval = null;
@@ -562,8 +419,6 @@ def get_dashboard_html():
                     hideDeletePopup();
                     if (itemToDeleteType === 'login') {
                         loadLogins();
-                    } else {
-                        window.location.reload();
                     }
                 } else {
                     alert('Failed to delete.');
@@ -572,7 +427,6 @@ def get_dashboard_html():
         }
 
         loadStats();
-        loadShows();
         loadLogins();
         setInterval(loadStats, 5000);
     </script>
