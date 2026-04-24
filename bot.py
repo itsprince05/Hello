@@ -124,8 +124,8 @@ def get_dashboard_html():
                     <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                         {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
                     </div>
-                    <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px;">
-                        <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">{html_escape.escape(s.get("name", ""))}</div>
+                    <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px; min-width:0;">
+                        <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-break:break-all;">{html_escape.escape(s.get("name", ""))}</div>
                     </div>
                 </div>
                 <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252; margin: 10px; flex-shrink:0;" onclick="showDeletePopup('{html_escape.escape(s.get('id', ''))}'); event.stopPropagation();">
@@ -497,8 +497,8 @@ def get_dashboard_html():
                                 <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                     ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
                                 </div>
-                                <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px;">
-                                    <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${s.name}</div>
+                                <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px; min-width:0;">
+                                    <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-break:break-all;">${s.name}</div>
                                 </div>
                             </div>
                             <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252; margin: 10px; flex-shrink:0;" onclick="showDeletePopup('${s.id}'); event.stopPropagation();">
@@ -789,8 +789,8 @@ def get_login_detail_html(uid, name):
                             <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                 ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
-                            <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px;">
-                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
+                            <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px; min-width:0;">
+                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-break:break-all;">${{b.show_title}}</div>
                             </div>
                         </div>
                     `).join('');
