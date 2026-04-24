@@ -1041,14 +1041,14 @@ def api_get_logins():
 
 @flask_app.route("/api/logins/<path:uid>/items", methods=["GET"])
 def api_logins_shows(uid):
-    import json
+    import urllib.request, urllib.error, json
     
     login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
     if not login:
         return jsonify({"status": 0, "message": "User not found or session expired"}), 404
         
-    url = "https://api.studio.pocketfm.com/v2/content_api/book.published_shows?is_novel=0"
-    headers = {
+    target_url = "https://api.studio.pocketfm.com/v2/content_api/book.published_shows?is_novel=0"
+    target_headers = {
         "accept": "application/json, text/plain, */*",
         "accept-language": "en-US,en;q=0.9",
         "app-client": "consumer-web",
@@ -1070,29 +1070,50 @@ def api_logins_shows(uid):
         "web-platform": "studio"
     }
     
-    curl_parts = [f"curl -sL --compressed --max-time 30 '{url}'"]
-    for k, v in headers.items():
-        safe_v = v.replace("'", "'\\''")
-        curl_parts.append(f"-H '{k}: {safe_v}'")
-    curl_cmd = " \\\n  ".join(curl_parts)
-        
-    log_msg = f"User Shows Request cURL:\n{curl_cmd}\n"
+    proxy_url = "https://curl-proxy.bruceliu-dev.workers.dev/"
+    proxy_payload = json.dumps({
+        "url": target_url,
+        "method": "GET",
+        "headers": target_headers
+    }).encode("utf-8")
+    
+    proxy_headers = {
+        "accept": "*/*",
+        "content-type": "application/json",
+        "origin": "https://curlonline.com",
+        "referer": "https://curlonline.com/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0"
+    }
+    
+    curl_cmd = f"curl '{target_url}'"
+    for k, v in target_headers.items():
+        curl_cmd += f" \\\n  -H '{k}: {v}'"
+    
+    log_msg = f"Proxy Request to: {proxy_url}\nTarget: {target_url}\n"
     
     try:
-        result = subprocess.run(curl_cmd, shell=True, capture_output=True, text=True, timeout=35)
-        resp_body = result.stdout
-        resp_stderr = result.stderr
+        req = urllib.request.Request(proxy_url, data=proxy_payload, headers=proxy_headers, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as response:
+            proxy_resp = json.loads(response.read().decode())
         
-        log_msg += f"Exit Code: {result.returncode}\nstdout: {resp_body}\nstderr: {resp_stderr}"
+        resp_body = proxy_resp.get("body", "")
+        resp_status = proxy_resp.get("status", 0)
+        
+        log_msg += f"Proxy Response Status: {resp_status}\nBody: {resp_body}"
         add_log("API", log_msg)
         
         try:
             res_json = json.loads(resp_body)
         except:
-            res_json = {"status": 0, "message": f"Invalid JSON. Exit: {result.returncode}. stdout: {resp_body[:500]}. stderr: {resp_stderr[:500]}"}
+            res_json = {"status": 0, "message": f"Invalid JSON from API. Proxy status: {resp_status}. Body: {resp_body[:500]}"}
             
-        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body or resp_stderr}
+        res_json["debug"] = {"curl_command": curl_cmd, "response_body": resp_body}
         return jsonify(res_json)
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode()
+        log_msg += f"Proxy HTTP Error: {e.code}\nBody: {err_body}"
+        add_log("API", log_msg)
+        return jsonify({"status": 0, "message": f"Proxy error: {e.code}", "debug": {"curl_command": curl_cmd, "response_body": err_body}}), 502
     except Exception as e:
         log_msg += f"Exception: {str(e)}"
         add_log("API", log_msg)
