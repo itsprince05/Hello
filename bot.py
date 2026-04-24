@@ -119,16 +119,16 @@ def get_dashboard_html():
         empty_display = "none"
         list_display = "flex"
         shows_rendered = "".join([
-            f"""<div class="item" style="display:flex; align-items:flex-start; background:#fff; overflow:hidden; border-bottom: 1px solid #e0e0e0; cursor:pointer;" onclick="window.location.href='/item/{__import__('urllib').parse.quote(str(s.get('id', '')))}'">
-                <div style="display:flex; gap:0; align-items:flex-start; flex:1; overflow:hidden;">
-                    <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            f"""<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/item/{__import__('urllib').parse.quote(str(s.get('id', '')))}'">
+                <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
+                    <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                         {f'<img src="{html_escape.escape(s.get("image", ""))}" style="width:100%; height:100%; object-fit:cover;">' if s.get("image") else '<span style="font-size:26px;">📺</span>'}
                     </div>
-                    <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px;">
+                    <div style="display:flex; flex-direction:column; margin: 10px 0; overflow:hidden;">
                         <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">{html_escape.escape(s.get("name", ""))}</div>
                     </div>
                 </div>
-                <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252; margin: 10px; flex-shrink:0;" onclick="showDeletePopup('{html_escape.escape(s.get('id', ''))}'); event.stopPropagation();">
+                <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('{html_escape.escape(s.get("id", ""))}'); event.stopPropagation();">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </div>
             </div>"""
@@ -234,7 +234,7 @@ def get_dashboard_html():
             <h4 style="margin:0 0 10px 0; color:#1c1e21; font-weight: 500; font-size: 18px;">Empty List</h4>
             <p style="font-size: 14px; margin:0; color:#888;">No shows available right now.</p>
         </div>
-        <div id="shows-list" style="display:{{LIST_DISPLAY}}; flex-direction:column; gap:0;">{{SHOWS_LIST}}</div>
+        <div id="shows-list" style="display:{{LIST_DISPLAY}}; flex-direction:column; gap:15px;">{{SHOWS_LIST}}</div>
     </div>
 
     <!-- TAB 2: ADD SHOW -->
@@ -492,16 +492,16 @@ def get_dashboard_html():
                     emptyState.style.display = 'none';
                     listContainer.style.display = 'flex';
                     listContainer.innerHTML = data.shows.map(s => 
-                        `<div class="item" style="display:flex; align-items:flex-start; background:#fff; overflow:hidden; border-bottom: 1px solid #e0e0e0; cursor:pointer;" onclick="window.location.href='/item/${encodeURIComponent(s.id)}'">
-                            <div style="display:flex; gap:0; align-items:flex-start; flex:1; overflow:hidden;">
-                                <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        `<div class="item" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:0; padding-right:10px; border-radius:10px; border:1px solid #e0e0e0; overflow:hidden; cursor:pointer;" onclick="window.location.href='/item/${encodeURIComponent(s.id)}'">
+                            <div style="display:flex; gap:10px; align-items:flex-start; align-self:stretch;">
+                                <div style="width:80px; align-self:stretch; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                                     ${s.image ? `<img src="${s.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
                                 </div>
-                                <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px;">
+                                <div style="display:flex; flex-direction:column; margin: 10px 0; overflow:hidden;">
                                     <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${s.name}</div>
                                 </div>
                             </div>
-                            <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252; margin: 10px; flex-shrink:0;" onclick="showDeletePopup('${s.id}'); event.stopPropagation();">
+                            <div style="display:flex; justify-content:center; align-items:center; cursor:pointer; width:36px; height:36px; border-radius:50%; background:#fff5f5; color:#fa5252;" onclick="showDeletePopup('${s.id}'); event.stopPropagation();">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2-icon lucide-trash-2"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             </div>
                         </div>`
@@ -790,7 +790,7 @@ def get_login_detail_html(uid, name):
                                 ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
                             <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px;">
-                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
+                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
                             </div>
                         </div>
                     `).join('');
