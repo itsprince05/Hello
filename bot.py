@@ -251,7 +251,7 @@ def get_dashboard_html():
             const errDiv = document.getElementById('login-error');
             
             if(!email || !password) {
-                alert("Please enter both Email ID and Password.");
+                alert("Please enter both Email ID and Password...");
                 return;
             }
             
@@ -1519,26 +1519,10 @@ def audio_worker():
             output_filename = f"Ep - {ep_num}.mp3"
             output_path = os.path.join(tmp_dir, output_filename)
             
-            # Get duration first for bitrate calculation
-            try:
-                probe = subprocess.run(
-                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", media_url],
-                    capture_output=True, text=True, timeout=60
-                )
-                duration = float(probe.stdout.strip())
-            except:
-                duration = 0
-            
-            if duration > 0:
-                target_kbps = int((28 * 8 * 1024) / duration)
-                target_kbps = min(target_kbps, 128)
-                target_kbps = max(target_kbps, 32)
-            else:
-                target_kbps = 64
-            
             # Stream URL directly into ffmpeg (download + convert simultaneously)
+            # 64kbps mono = ~5.5MB per 12min, always under 30MB
             result = subprocess.run(
-                ["ffmpeg", "-y", "-i", media_url, "-vn", "-ac", "1", "-b:a", f"{target_kbps}k", output_path],
+                ["ffmpeg", "-y", "-i", media_url, "-vn", "-ac", "1", "-b:a", "64k", output_path],
                 capture_output=True, timeout=600
             )
             
