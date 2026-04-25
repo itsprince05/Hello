@@ -334,7 +334,13 @@ def get_dashboard_html():
                     const hrs = Math.floor(diff / 3600);
                     const mins = Math.floor((diff % 3600) / 60);
                     const secs = diff % 60;
-                    el.innerHTML = `Login expired in - <span style="font-weight: bold; color: #2481cc;">${hrs}h ${mins}m ${secs}s</span>`;
+                    let timeStr = '';
+                    if (hrs > 0) {
+                        timeStr = `${hrs}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+                    } else {
+                        timeStr = `${mins}m ${String(secs).padStart(2, '0')}s`;
+                    }
+                    el.innerHTML = `Login expired in - <span style="font-weight: bold; color: #2481cc;">${timeStr}</span>`;
                     el.style.color = "#666";
                 }
             });
