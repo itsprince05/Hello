@@ -413,13 +413,15 @@ def get_dashboard_html():
 
         async function confirmDelete() {
             if(!itemToDeleteId) return;
+            const delType = itemToDeleteType;
+            const delId = itemToDeleteId;
             
             try {
-                let url = itemToDeleteType === 'login' ? `/api/logins/${encodeURIComponent(itemToDeleteId)}` : `/api/items/${encodeURIComponent(itemToDeleteId)}`;
+                let url = delType === 'login' ? `/api/logins/${encodeURIComponent(delId)}` : `/api/items/${encodeURIComponent(delId)}`;
                 const res = await fetch(url, { method: 'DELETE' });
                 if(res.ok) {
                     hideDeletePopup();
-                    if (itemToDeleteType === 'login') {
+                    if (delType === 'login') {
                         loadLogins();
                     }
                 } else {
