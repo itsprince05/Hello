@@ -641,16 +641,16 @@ def get_login_detail_html(uid, name):
                 if(res.ok && data.status === 1 && data.result && data.result.books && data.result.books.length > 0) {{
                     const container = document.getElementById('list-container');
                     container.style.display = 'flex';
-                    container.innerHTML = data.result.books.map(b => {
+                    container.innerHTML = data.result.books.map(b => {{
                         const sid = b.show_id || '';
-                        const stitle = (b.show_title || '').replace(/'/g, "\\'");
+                        const stitle = (b.show_title || '').replace(/'/g, "\\\\'");
                         return `
-                        <div class="item" style="cursor:pointer;" onclick="goToDetail('${sid}', '${stitle}')">
+                        <div class="item" style="cursor:pointer;" onclick="goToDetail('${{sid}}', '${{stitle}}')">
                             <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                                ${b.image_url ? `<img src="${b.image_url}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
+                                ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
                             <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px; width: 100%;">
-                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${b.show_title}</div>
+                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
                             </div>
                         </div>`;
                     }}).join('');
