@@ -1253,7 +1253,7 @@ def api_login_detail_list(uid, sid):
 
 @flask_app.route("/api/send_script", methods=["POST"])
 def api_send_script():
-    import urllib.request, json, tempfile, os
+    import urllib.request, json, tempfile, os, re, uuid
     data = request.json
     file_url = data.get("file_url", "")
     caption = data.get("caption", "Script")
@@ -1268,31 +1268,44 @@ def api_send_script():
             content = response.read()
         
         # Extract Ep number from caption (e.g. "Ep 2864 - ...")
-        import re
         ep_match = re.search(r'Ep\s*(\d+)', caption, re.IGNORECASE)
         ep_num = ep_match.group(1) if ep_match else "0"
         filename = f"Ep - {ep_num}.html"
         
-        # Save as .html temp file
-        tmp_dir = tempfile.mkdtemp()
-        tmp_path = os.path.join(tmp_dir, filename)
-        with open(tmp_path, 'wb') as f:
-            f.write(content)
+        # Send to Telegram using multipart/form-data via urllib
+        boundary = uuid.uuid4().hex
+        body = b''
         
-        # Send to Telegram group
-        import requests as req_lib
+        # chat_id field
+        body += f'--{boundary}\r\n'.encode()
+        body += b'Content-Disposition: form-data; name="chat_id"\r\n\r\n'
+        body += f'{ALLOWED_GROUP_ID}\r\n'.encode()
+        
+        # caption field
+        body += f'--{boundary}\r\n'.encode()
+        body += b'Content-Disposition: form-data; name="caption"\r\n\r\n'
+        body += f'{caption}\r\n'.encode()
+        
+        # document file field
+        body += f'--{boundary}\r\n'.encode()
+        body += f'Content-Disposition: form-data; name="document"; filename="{filename}"\r\n'.encode()
+        body += b'Content-Type: text/html\r\n\r\n'
+        body += content
+        body += b'\r\n'
+        
+        body += f'--{boundary}--\r\n'.encode()
+        
         tg_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
-        with open(tmp_path, 'rb') as f:
-            resp = req_lib.post(tg_url, data={
-                "chat_id": ALLOWED_GROUP_ID,
-                "caption": caption
-            }, files={"document": (filename, f, "text/html")})
+        tg_req = urllib.request.Request(tg_url, data=body, method="POST")
+        tg_req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
         
-        # Cleanup
-        os.remove(tmp_path)
-        os.rmdir(tmp_dir)
+        with urllib.request.urlopen(tg_req, timeout=30) as tg_resp:
+            tg_result = json.loads(tg_resp.read().decode())
         
-        return jsonify({"status": "success"})
+        if tg_result.get("ok"):
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "error", "message": tg_result.get("description", "Unknown error")}), 500
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
