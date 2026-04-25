@@ -638,7 +638,7 @@ def get_login_detail_html(uid, name):
                     const container = document.getElementById('shows-container');
                     container.style.display = 'flex';
                     container.innerHTML = data.result.books.map(b => `
-                        <div class="item">
+                        <div class="item" style="cursor:pointer;" onclick="window.location.href='/login/{uid_esc}/show/' + encodeURIComponent(b.show_id) + '?title=' + encodeURIComponent(b.show_title)">
                             <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                 ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
@@ -660,6 +660,183 @@ def get_login_detail_html(uid, name):
         }}
         
         loadUserShows();
+    </script>
+</body>
+</html>'''
+    return html
+
+
+def get_episode_list_html(uid, show_id, show_title):
+    import html as html_escape
+    s_title = html_escape.escape(show_title)
+    uid_esc = html_escape.escape(uid)
+    show_id_esc = html_escape.escape(show_id)
+    
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Episodes - {s_title}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {{ font-family: 'Outfit', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; color: #1c1e21; -webkit-user-select: none; user-select: none; }}
+        .action-bar {{ position: sticky; top: 0; z-index: 100; box-sizing: border-box; height: 48px; background: #2481cc; color: white; padding: 0 10px; gap: 10px; display: flex; align-items: center; }}
+        .back-btn {{ width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; border-radius: 50%; flex-shrink: 0; }}
+        .back-btn:hover {{ background: rgba(255,255,255,0.2); }}
+        .navbar-title {{ font-size: 18px; font-weight: 600; letter-spacing: 0.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }}
+        .container {{ max-width: 800px; margin: 0 auto; padding: 15px; }}
+        .loader-container {{ display: flex; justify-content: center; align-items: center; height: 60vh; color: #2481cc; }}
+        @keyframes spin {{ 100% {{ transform: rotate(360deg); }} }}
+        .lucide-loader {{ animation: spin 1s linear infinite; width: 32px; height: 32px; }}
+        
+        .episode-list {{ display: flex; flex-direction: column; gap: 0; background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }}
+        .episode-item {{ display: flex; flex-direction: column; border-bottom: 1px solid #eee; padding: 12px 15px; }}
+        .episode-item:last-child {{ border-bottom: none; }}
+        .ep-title {{ font-weight: 600; font-size: 14px; color: #1c1e21; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; word-wrap: break-word; }}
+        .ep-status {{ font-size: 12px; color: #999; margin-top: 4px; }}
+        .ep-actions {{ display: flex; gap: 8px; margin-top: 10px; }}
+        .ep-btn {{ display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; }}
+        .ep-btn svg {{ width: 16px; height: 16px; }}
+        .ep-btn.script {{ background: #eef5fb; color: #2481cc; }}
+        .ep-btn.script:hover {{ background: #dbeaf7; }}
+        .ep-btn.audio {{ background: #e6fcf5; color: #0ca678; }}
+        .ep-btn.audio:hover {{ background: #d3f9eb; }}
+        .ep-btn.audio.disabled {{ background: #f0f2f5; color: #bbb; cursor: not-allowed; pointer-events: none; }}
+        
+        .load-more-btn {{ display: flex; align-items: center; justify-content: center; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-top: 15px; font-family: inherit; }}
+        .load-more-btn:disabled {{ background: #ccc; cursor: not-allowed; }}
+    </style>
+</head>
+<body>
+    <div class="action-bar">
+        <div class="back-btn" onclick="window.history.back()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        </div>
+        <div class="navbar-title">{s_title}</div>
+    </div>
+    
+    <div class="container">
+        <div id="loader" class="loader-container">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-icon lucide-loader"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+        </div>
+        <div id="episodes-container" class="episode-list" style="display:none;"></div>
+        <button id="load-more" class="load-more-btn" style="display:none;" onclick="loadMore()">Load More</button>
+        <div id="empty-state" style="display:none; justify-content:center; align-items:center; height: 60vh; color: #888; font-size: 15px; font-weight: 500;"></div>
+    </div>
+
+    <script>
+        let nextUrl = null;
+        let isFirstLoad = true;
+        
+        function downloadScript(fileUrl, title) {{
+            if (!fileUrl) return;
+            const a = document.createElement('a');
+            a.href = fileUrl;
+            a.download = title + '.txt';
+            a.target = '_blank';
+            a.click();
+        }}
+        
+        function downloadAudio(mediaUrl, title) {{
+            if (!mediaUrl) return;
+            const a = document.createElement('a');
+            a.href = mediaUrl;
+            a.download = title + '.mp3';
+            a.target = '_blank';
+            a.click();
+        }}
+        
+        function renderEpisode(ep) {{
+            const ch = ep.chapter_details || {{}};
+            const title = ch.chapter_title || 'Untitled';
+            const fileUrl = ch.file_url || '';
+            const mediaUrl = ch.media_url || '';
+            const audioAvail = ep.audio_available === true;
+            const audioStatus = ch.audio_status || '';
+            
+            let statusText = '';
+            if (!audioAvail) {{
+                statusText = 'Audio Unavailable';
+            }} else {{
+                statusText = audioStatus || 'Available';
+            }}
+            
+            const audioBtnClass = audioAvail ? 'ep-btn audio' : 'ep-btn audio disabled';
+            const audioOnclick = audioAvail && mediaUrl ? `onclick="downloadAudio('${{mediaUrl.replace(/'/g, "\\'")}}', '${{title.replace(/'/g, "\\'")}}')"` : '';
+            
+            return `<div class="episode-item">
+                <div class="ep-title">${{title}}</div>
+                <div class="ep-status">${{statusText}}</div>
+                <div class="ep-actions">
+                    <button class="ep-btn script" onclick="downloadScript('${{fileUrl.replace(/'/g, "\\'")}}', '${{title.replace(/'/g, "\\\'")}}')"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg> Script</button>
+                    <button class="${{audioBtnClass}}" ${{audioOnclick}}><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg> Audio</button>
+                </div>
+            </div>`;
+        }}
+        
+        async function loadEpisodes(url) {{
+            const loadMoreBtn = document.getElementById('load-more');
+            
+            if (!isFirstLoad) {{
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.textContent = 'Loading...';
+            }}
+            
+            try {{
+                const fetchUrl = url || `/api/logins/{uid_esc}/shows/{show_id_esc}/episodes`;
+                const res = await fetch(fetchUrl);
+                const data = await res.json();
+                
+                if (isFirstLoad) {{
+                    document.getElementById('loader').style.display = 'none';
+                }}
+                
+                if (data.status === 1 && data.result && data.result.episodes && data.result.episodes.length > 0) {{
+                    const container = document.getElementById('episodes-container');
+                    container.style.display = 'flex';
+                    
+                    const html = data.result.episodes.map(ep => renderEpisode(ep)).join('');
+                    container.innerHTML += html;
+                    
+                    nextUrl = data.result.next_url || null;
+                    if (nextUrl) {{
+                        loadMoreBtn.style.display = 'flex';
+                        loadMoreBtn.disabled = false;
+                        loadMoreBtn.textContent = 'Load More';
+                    }} else {{
+                        loadMoreBtn.style.display = 'none';
+                    }}
+                }} else if (isFirstLoad) {{
+                    document.getElementById('empty-state').style.display = 'flex';
+                    document.getElementById('empty-state').innerHTML = 'No episodes found...';
+                }} else {{
+                    loadMoreBtn.style.display = 'none';
+                }}
+                
+                isFirstLoad = false;
+            }} catch(e) {{
+                console.error(e);
+                if (isFirstLoad) {{
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('empty-state').style.display = 'flex';
+                    document.getElementById('empty-state').innerHTML = 'Failed to load episodes...';
+                }} else {{
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.textContent = 'Retry';
+                }}
+                isFirstLoad = false;
+            }}
+        }}
+        
+        function loadMore() {{
+            if (nextUrl) {{
+                const proxyUrl = `/api/logins/{uid_esc}/shows/{show_id_esc}/episodes?next_url=` + encodeURIComponent(nextUrl);
+                loadEpisodes(proxyUrl);
+            }}
+        }}
+        
+        loadEpisodes();
     </script>
 </body>
 </html>'''
@@ -967,6 +1144,87 @@ def login_page(uid):
     if not login:
         return "Login not found", 404
     return get_login_detail_html(uid, login.get("name", "Unknown"))
+
+
+@flask_app.route("/login/<path:uid>/show/<path:show_id>")
+def login_show_episodes_page(uid, show_id):
+    login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
+    if not login:
+        return "Login not found", 404
+    show_title = request.args.get("title", "Episodes")
+    return get_episode_list_html(uid, show_id, show_title)
+
+
+@flask_app.route("/api/logins/<path:uid>/shows/<path:show_id>/episodes", methods=["GET"])
+def api_login_show_episodes(uid, show_id):
+    import urllib.request, urllib.error, json
+    
+    login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
+    if not login:
+        return jsonify({"status": 0, "message": "User not found or session expired"}), 404
+    
+    # Check if next_url is passed for pagination
+    next_url_param = request.args.get("next_url", None)
+    
+    if next_url_param:
+        target_url = next_url_param
+    else:
+        target_url = f"https://api.studio.pocketfm.com/v2/content_api/book.show_episodes?is_novel=0&show_id={show_id}&view=dashboard"
+    
+    target_headers = {
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "en-US,en;q=0.9",
+        "app-client": "consumer-web",
+        "app-version": "180",
+        "auth-token": "web-auth",
+        "authorization": login.get("access_token", ""),
+        "origin": "https://partner.pocketfm.com",
+        "priority": "u=1, i",
+        "referer": "https://partner.pocketfm.com/",
+        "sec-ch-ua": '"Microsoft Edge";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "source": "studio",
+        "uid": login.get("uid", ""),
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+        "web-platform": "studio"
+    }
+    
+    proxy_url = "https://curl-proxy.bruceliu-dev.workers.dev/"
+    proxy_payload = json.dumps({
+        "url": target_url,
+        "method": "GET",
+        "headers": target_headers
+    }).encode("utf-8")
+    
+    proxy_headers = {
+        "accept": "*/*",
+        "content-type": "application/json",
+        "origin": "https://curlonline.com",
+        "referer": "https://curlonline.com/",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0"
+    }
+    
+    try:
+        req = urllib.request.Request(proxy_url, data=proxy_payload, headers=proxy_headers, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as response:
+            proxy_resp = json.loads(response.read().decode())
+        
+        resp_body = proxy_resp.get("body", "")
+        
+        try:
+            res_json = json.loads(resp_body)
+        except:
+            res_json = {"status": 0, "message": "Invalid JSON from API"}
+            
+        return jsonify(res_json)
+    except urllib.error.HTTPError as e:
+        return jsonify({"status": 0, "message": f"Proxy error: {e.code}"}), 502
+    except Exception as e:
+        return jsonify({"status": 0, "message": str(e)}), 500
 
 @flask_app.route("/api/logins/<path:uid>", methods=["DELETE"])
 def api_logins_delete(uid):
