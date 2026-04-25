@@ -638,7 +638,7 @@ def get_login_detail_html(uid, name):
                     const container = document.getElementById('shows-container');
                     container.style.display = 'flex';
                     container.innerHTML = data.result.books.map(b => `
-                        <div class="item" style="cursor:pointer;" onclick="window.location.href='/login/{uid_esc}/show/' + encodeURIComponent(b.show_id) + '?title=' + encodeURIComponent(b.show_title)">
+                        <div class="item" style="cursor:pointer;" onclick="window.location.href='/login/{uid_esc}/show/${{encodeURIComponent(b.show_id)}}?title=${{encodeURIComponent(b.show_title)}}'">
                             <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                 ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
