@@ -642,7 +642,7 @@ def get_login_detail_html(uid, name):
                     const container = document.getElementById('list-container');
                     container.style.display = 'flex';
                     container.innerHTML = data.result.books.map(b => `
-                        <div class="item" style="cursor:pointer;" onclick="window.location.href='/login/{uid_esc}/detail/${{encodeURIComponent(b.show_id)}}?title=${{encodeURIComponent(b.show_title)}}'">
+                        <div class="item" style="cursor:pointer;" onclick="sessionStorage.setItem('dt_'+encodeURIComponent(b.show_id), b.show_title); window.location.href='/login/{uid_esc}/detail/${{encodeURIComponent(b.show_id)}}'">
                             <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                                 ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
                             </div>
@@ -683,6 +683,13 @@ def get_detail_list_html(uid, sid, detail_title):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bot Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // Restore title from sessionStorage if available
+        (function() {{
+            var st = sessionStorage.getItem('dt_{sid_esc}');
+            if (st) document.title = 'Bot Dashboard';
+        }})();
+    </script>
     <style>
         body {{ font-family: 'Outfit', sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; color: #1c1e21; -webkit-user-select: none; user-select: none; }}
         .action-bar {{ position: sticky; top: 0; z-index: 100; box-sizing: border-box; height: 48px; background: #2481cc; color: white; padding: 0 10px; gap: 10px; display: flex; align-items: center; }}
@@ -718,7 +725,7 @@ def get_detail_list_html(uid, sid, detail_title):
         <div class="back-btn" onclick="window.history.back()">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
         </div>
-        <div class="navbar-title">{s_title}</div>
+        <div class="navbar-title" id="nav-title">{s_title}</div>
     </div>
     
     <div class="container">
@@ -731,6 +738,12 @@ def get_detail_list_html(uid, sid, detail_title):
     </div>
 
     <script>
+        // Restore title from sessionStorage
+        (function() {{
+            var st = sessionStorage.getItem('dt_{sid_esc}');
+            if (st) document.getElementById('nav-title').textContent = st;
+        }})();
+        
         let nextPage = null;
         let isFirstLoad = true;
         
@@ -1174,7 +1187,7 @@ def login_detail_page(uid, sid):
     login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
     if not login:
         return "Login not found", 404
-    detail_title = request.args.get("title", "Items")
+    detail_title = request.args.get("t", "Items")
     return get_detail_list_html(uid, sid, detail_title)
 
 
@@ -1467,73 +1480,41 @@ def audio_worker():
                 audio_queue.task_done()
                 continue
             
-            logger.info(f"[AudioWorker] Got media_url, downloading...")
+            logger.info(f"[AudioWorker] Got media_url, converting...")
             
-            # Step 2: Download audio file
+            # Step 2: Convert directly from URL to MP3 using ffmpeg (stream, no download)
             tmp_dir = tempfile.mkdtemp()
-            
-            # Detect extension from URL
-            from urllib.parse import urlparse
-            parsed = urlparse(media_url.split("?")[0])
-            ext = os.path.splitext(parsed.path)[1] or ".wav"
-            
-            input_path = os.path.join(tmp_dir, f"input{ext}")
-            
-            req2 = urllib.request.Request(media_url)
-            with urllib.request.urlopen(req2, timeout=300) as resp2:
-                with open(input_path, 'wb') as f:
-                    while True:
-                        chunk = resp2.read(65536)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-            
-            input_size = os.path.getsize(input_path)
-            logger.info(f"[AudioWorker] Downloaded {input_size / (1024*1024):.1f}MB")
-            
-            # Step 3: Convert to MP3 < 30MB using ffmpeg
             ep_match = re.search(r'Ep\s*(\d+)', caption, re.IGNORECASE)
             ep_num = ep_match.group(1) if ep_match else "0"
             output_filename = f"Ep - {ep_num}.mp3"
             output_path = os.path.join(tmp_dir, output_filename)
             
-            # First try: get duration to calculate bitrate for <30MB
+            # Get duration first for bitrate calculation
             try:
                 probe = subprocess.run(
-                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", input_path],
-                    capture_output=True, text=True, timeout=30
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", media_url],
+                    capture_output=True, text=True, timeout=60
                 )
                 duration = float(probe.stdout.strip())
             except:
                 duration = 0
             
             if duration > 0:
-                # Calculate bitrate: 30MB = 30*8*1024 kbits, leave some margin
                 target_kbps = int((28 * 8 * 1024) / duration)
-                target_kbps = min(target_kbps, 192)  # cap at 192kbps
-                target_kbps = max(target_kbps, 32)   # minimum 32kbps
+                target_kbps = min(target_kbps, 128)
+                target_kbps = max(target_kbps, 32)
             else:
                 target_kbps = 64
             
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", input_path, "-vn", "-ar", "44100", "-ac", "2", "-b:a", f"{target_kbps}k", output_path],
+            # Stream URL directly into ffmpeg (download + convert simultaneously)
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-i", media_url, "-vn", "-ac", "1", "-b:a", f"{target_kbps}k", output_path],
                 capture_output=True, timeout=600
             )
             
-            # Verify size, if still > 30MB, re-encode with lower bitrate
-            if os.path.exists(output_path) and os.path.getsize(output_path) > 30 * 1024 * 1024:
-                lower_kbps = max(int(target_kbps * 0.6), 32)
-                os.remove(output_path)
-                subprocess.run(
-                    ["ffmpeg", "-y", "-i", input_path, "-vn", "-ar", "44100", "-ac", "2", "-b:a", f"{lower_kbps}k", output_path],
-                    capture_output=True, timeout=600
-                )
-            
-            if not os.path.exists(output_path):
+            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
                 logger.error(f"[AudioWorker] ffmpeg failed for: {caption}")
-                # Cleanup
                 try:
-                    os.remove(input_path)
                     os.rmdir(tmp_dir)
                 except:
                     pass
@@ -1583,7 +1564,6 @@ def audio_worker():
             
             # Cleanup
             try:
-                os.remove(input_path)
                 os.remove(output_path)
                 os.rmdir(tmp_dir)
             except:
