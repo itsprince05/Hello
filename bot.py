@@ -1169,7 +1169,7 @@ def api_login_show_episodes(uid, show_id):
     if next_url_param:
         target_url = next_url_param
     else:
-        target_url = f"https://api.studio.pocketfm.com/v2/content_api/book.show_episodes?is_novel=0&show_id={show_id}&view=dashboard"
+        target_url = f"https://api.studio.pocketfm.com/v2/content_api/book.show_episodes?is_novel=0&page_no=1&paginate_chapters=true&show_id={show_id}&view=dashboard"
     
     target_headers = {
         "accept": "application/json, text/plain, */*",
