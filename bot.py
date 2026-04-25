@@ -1351,6 +1351,20 @@ def audio_worker():
     """Background thread that processes audio queue items"""
     import urllib.request, urllib.error, json, tempfile, os, re, uuid, subprocess
     
+    # Auto-install ffmpeg if not present (Linux only)
+    if platform.system() != "Windows":
+        try:
+            result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.info("ffmpeg not found, installing...")
+                subprocess.run(["apt-get", "update", "-qq"], capture_output=True, timeout=60)
+                subprocess.run(["apt-get", "install", "-y", "-qq", "ffmpeg"], capture_output=True, timeout=120)
+                logger.info("ffmpeg installed")
+            else:
+                logger.info("ffmpeg found")
+        except Exception as e:
+            logger.error(f"ffmpeg install check failed: {e}")
+    
     while True:
         try:
             task = audio_queue.get()
@@ -1840,20 +1854,6 @@ def main():
     logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
-
-    # Auto-install ffmpeg if not present (Linux only)
-    if platform.system() != "Windows":
-        try:
-            result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
-            if result.returncode != 0:
-                logger.info("ffmpeg not found, installing...")
-                subprocess.run(["apt-get", "update", "-qq"], capture_output=True, timeout=60)
-                subprocess.run(["apt-get", "install", "-y", "-qq", "ffmpeg"], capture_output=True, timeout=120)
-                logger.info("ffmpeg installed")
-            else:
-                logger.info("ffmpeg found")
-        except Exception as e:
-            logger.error(f"ffmpeg install check failed: {e}")
 
     # Start audio worker thread
     audio_thread = threading.Thread(target=audio_worker, daemon=True)
