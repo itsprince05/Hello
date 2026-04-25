@@ -57,6 +57,10 @@ active_groups = {}
 SHOWS_FILE = "shows.json"
 LOGINS_FILE = "logins.json"
 
+# Audio processing queue
+import queue as queue_module
+audio_queue = queue_module.Queue()
+
 def load_shows():
     import os, json
     if os.path.exists(SHOWS_FILE):
@@ -746,13 +750,20 @@ def get_detail_list_html(uid, sid, detail_title):
             }}
         }}
         
-        function downloadAudio(mediaUrl, title) {{
-            if (!mediaUrl) return;
-            const a = document.createElement('a');
-            a.href = mediaUrl;
-            a.download = title + '.mp3';
-            a.target = '_blank';
-            a.click();
+        async function sendAudio(btn, chapterId, title) {{
+            if (!chapterId) return;
+            btn.innerHTML = 'Sent in Telegram';
+            btn.classList.add('sent');
+            
+            try {{
+                await fetch('/api/send_audio', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ uid: '{uid_esc}', sid: '{sid_esc}', chapter_id: chapterId, caption: title }})
+                }});
+            }} catch(e) {{
+                console.error(e);
+            }}
         }}
         
         let itemCounter = 0;
@@ -761,7 +772,7 @@ def get_detail_list_html(uid, sid, detail_title):
             itemCounter++;
             const title = ep.title || 'Untitled';
             const fileUrl = ep.file_url || '';
-            const mediaUrl = ep.media_url || '';
+            const chapterId = ep.chapter_id || '';
             const audioAvail = ep.audio_available === true;
             const audioStatus = ep.audio_status || '';
             const epNum = itemCounter;
@@ -774,7 +785,7 @@ def get_detail_list_html(uid, sid, detail_title):
             }}
             
             const audioBtnClass = audioAvail ? 'ep-btn audio' : 'ep-btn audio disabled';
-            const audioOnclick = audioAvail && mediaUrl ? `onclick="downloadAudio('${{mediaUrl.replace(/'/g, "\\\\'")}}', '${{title.replace(/'/g, "\\\\'")}}')"`  : '';
+            const audioOnclick = audioAvail ? `onclick="sendAudio(this, '${{chapterId.replace(/'/g, "\\\\'")}}', '${{title.replace(/'/g, "\\\\'")}}')"`  : '';
             
             return `<div class="detail-item">
                 <div class="ep-title">${{title}}</div>
@@ -1235,7 +1246,7 @@ def api_login_detail_list(uid, sid):
                     filtered.append({
                         "title": ch.get("chapter_title", ""),
                         "file_url": ch.get("file_url", ""),
-                        "media_url": ch.get("media_url", ""),
+                        "chapter_id": ch.get("chapter_id", ""),
                         "audio_status": ch.get("audio_status", ""),
                         "audio_available": ep.get("audio_available", False)
                     })
@@ -1308,6 +1319,223 @@ def api_send_script():
             return jsonify({"status": "error", "message": tg_result.get("description", "Unknown error")}), 500
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@flask_app.route("/api/send_audio", methods=["POST"])
+def api_send_audio():
+    data = request.json
+    uid = data.get("uid", "")
+    sid = data.get("sid", "")
+    chapter_id = data.get("chapter_id", "")
+    caption = data.get("caption", "Audio")
+    
+    if not uid or not sid or not chapter_id:
+        return jsonify({"status": "error", "message": "Missing params"}), 400
+    
+    login = next((l for l in logins_list if str(l.get("uid")) == uid), None)
+    if not login:
+        return jsonify({"status": "error", "message": "Login not found"}), 404
+    
+    audio_queue.put({
+        "uid": uid,
+        "sid": sid,
+        "chapter_id": chapter_id,
+        "caption": caption,
+        "access_token": login.get("access_token", ""),
+    })
+    
+    return jsonify({"status": "queued"})
+
+
+def audio_worker():
+    """Background thread that processes audio queue items"""
+    import urllib.request, urllib.error, json, tempfile, os, re, uuid, subprocess
+    
+    while True:
+        try:
+            task = audio_queue.get()
+            uid = task["uid"]
+            sid = task["sid"]
+            chapter_id = task["chapter_id"]
+            caption = task["caption"]
+            access_token = task["access_token"]
+            
+            logger.info(f"[AudioWorker] Processing: {caption}")
+            
+            # Step 1: Get media_url from PocketFM API
+            media_api_url = f"https://api.studio.pocketfm.com/v2/content_api/get_media_url?is_novel=0&type=episode&media_type=audio&event=play&show_id={sid}&chapter_id={chapter_id}"
+            
+            target_headers = {
+                "accept": "application/json, text/plain, */*",
+                "accept-language": "en-US,en;q=0.9",
+                "app-client": "consumer-web",
+                "app-version": "180",
+                "auth-token": "web-auth",
+                "authorization": access_token,
+                "origin": "https://partner.pocketfm.com",
+                "priority": "u=1, i",
+                "referer": "https://partner.pocketfm.com/",
+                "source": "studio",
+                "uid": uid,
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+                "web-platform": "studio"
+            }
+            
+            proxy_url = "https://curl-proxy.bruceliu-dev.workers.dev/"
+            proxy_payload = json.dumps({
+                "url": media_api_url,
+                "method": "GET",
+                "headers": target_headers
+            }).encode("utf-8")
+            
+            proxy_headers = {
+                "accept": "*/*",
+                "content-type": "application/json",
+                "origin": "https://curlonline.com",
+                "referer": "https://curlonline.com/",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0"
+            }
+            
+            req = urllib.request.Request(proxy_url, data=proxy_payload, headers=proxy_headers, method="POST")
+            with urllib.request.urlopen(req, timeout=30) as response:
+                proxy_resp = json.loads(response.read().decode())
+            
+            resp_body = proxy_resp.get("body", "")
+            media_data = json.loads(resp_body)
+            media_url = media_data.get("media_url", "")
+            
+            if not media_url:
+                logger.error(f"[AudioWorker] No media_url for: {caption}")
+                audio_queue.task_done()
+                continue
+            
+            logger.info(f"[AudioWorker] Got media_url, downloading...")
+            
+            # Step 2: Download audio file
+            tmp_dir = tempfile.mkdtemp()
+            
+            # Detect extension from URL
+            from urllib.parse import urlparse
+            parsed = urlparse(media_url.split("?")[0])
+            ext = os.path.splitext(parsed.path)[1] or ".wav"
+            
+            input_path = os.path.join(tmp_dir, f"input{ext}")
+            
+            req2 = urllib.request.Request(media_url)
+            with urllib.request.urlopen(req2, timeout=300) as resp2:
+                with open(input_path, 'wb') as f:
+                    while True:
+                        chunk = resp2.read(65536)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+            
+            input_size = os.path.getsize(input_path)
+            logger.info(f"[AudioWorker] Downloaded {input_size / (1024*1024):.1f}MB")
+            
+            # Step 3: Convert to MP3 < 30MB using ffmpeg
+            ep_match = re.search(r'Ep\s*(\d+)', caption, re.IGNORECASE)
+            ep_num = ep_match.group(1) if ep_match else "0"
+            output_filename = f"Ep - {ep_num}.mp3"
+            output_path = os.path.join(tmp_dir, output_filename)
+            
+            # First try: get duration to calculate bitrate for <30MB
+            try:
+                probe = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", input_path],
+                    capture_output=True, text=True, timeout=30
+                )
+                duration = float(probe.stdout.strip())
+            except:
+                duration = 0
+            
+            if duration > 0:
+                # Calculate bitrate: 30MB = 30*8*1024 kbits, leave some margin
+                target_kbps = int((28 * 8 * 1024) / duration)
+                target_kbps = min(target_kbps, 192)  # cap at 192kbps
+                target_kbps = max(target_kbps, 32)   # minimum 32kbps
+            else:
+                target_kbps = 64
+            
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", input_path, "-vn", "-ar", "44100", "-ac", "2", "-b:a", f"{target_kbps}k", output_path],
+                capture_output=True, timeout=600
+            )
+            
+            # Verify size, if still > 30MB, re-encode with lower bitrate
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 30 * 1024 * 1024:
+                lower_kbps = max(int(target_kbps * 0.6), 32)
+                os.remove(output_path)
+                subprocess.run(
+                    ["ffmpeg", "-y", "-i", input_path, "-vn", "-ar", "44100", "-ac", "2", "-b:a", f"{lower_kbps}k", output_path],
+                    capture_output=True, timeout=600
+                )
+            
+            if not os.path.exists(output_path):
+                logger.error(f"[AudioWorker] ffmpeg failed for: {caption}")
+                # Cleanup
+                try:
+                    os.remove(input_path)
+                    os.rmdir(tmp_dir)
+                except:
+                    pass
+                audio_queue.task_done()
+                continue
+            
+            out_size = os.path.getsize(output_path)
+            logger.info(f"[AudioWorker] Converted to {out_size / (1024*1024):.1f}MB MP3")
+            
+            # Step 4: Upload to Telegram
+            with open(output_path, 'rb') as f:
+                audio_content = f.read()
+            
+            boundary = uuid.uuid4().hex
+            body = b''
+            
+            body += f'--{boundary}\r\n'.encode()
+            body += b'Content-Disposition: form-data; name="chat_id"\r\n\r\n'
+            body += f'{ALLOWED_GROUP_ID}\r\n'.encode()
+            
+            body += f'--{boundary}\r\n'.encode()
+            body += b'Content-Disposition: form-data; name="caption"\r\n\r\n'
+            body += f'{caption}\r\n'.encode()
+            
+            body += f'--{boundary}\r\n'.encode()
+            body += f'Content-Disposition: form-data; name="document"; filename="{output_filename}"\r\n'.encode()
+            body += b'Content-Type: audio/mpeg\r\n\r\n'
+            body += audio_content
+            body += b'\r\n'
+            
+            body += f'--{boundary}--\r\n'.encode()
+            
+            tg_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+            tg_req = urllib.request.Request(tg_url, data=body, method="POST")
+            tg_req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
+            
+            with urllib.request.urlopen(tg_req, timeout=120) as tg_resp:
+                tg_result = json.loads(tg_resp.read().decode())
+            
+            if tg_result.get("ok"):
+                logger.info(f"[AudioWorker] Sent to Telegram: {caption}")
+            else:
+                logger.error(f"[AudioWorker] Telegram error: {tg_result.get('description')}")
+            
+            # Cleanup
+            try:
+                os.remove(input_path)
+                os.remove(output_path)
+                os.rmdir(tmp_dir)
+            except:
+                pass
+            
+            audio_queue.task_done()
+            
+        except Exception as e:
+            logger.error(f"[AudioWorker] Error: {e}")
+            try:
+                audio_queue.task_done()
+            except:
+                pass
 
 @flask_app.route("/api/logins/<path:uid>", methods=["DELETE"])
 def api_logins_delete(uid):
@@ -1612,6 +1840,26 @@ def main():
     logger.info(f"Starting dashboard on port {DASHBOARD_PORT}...")
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
+
+    # Auto-install ffmpeg if not present (Linux only)
+    if platform.system() != "Windows":
+        try:
+            result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.info("ffmpeg not found, installing...")
+                subprocess.run(["apt-get", "update", "-qq"], capture_output=True, timeout=60)
+                subprocess.run(["apt-get", "install", "-y", "-qq", "ffmpeg"], capture_output=True, timeout=120)
+                logger.info("ffmpeg installed")
+            else:
+                logger.info("ffmpeg found")
+        except Exception as e:
+            logger.error(f"ffmpeg install check failed: {e}")
+
+    # Start audio worker thread
+    audio_thread = threading.Thread(target=audio_worker, daemon=True)
+    audio_thread.start()
+    logger.info("Audio worker started")
+
     time.sleep(3)
 
     # Verify Flask is running
