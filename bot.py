@@ -704,10 +704,10 @@ def get_detail_list_html(uid, sid, detail_title):
         .ep-btn svg {{ width: 16px; height: 16px; }}
         .ep-btn.script {{ background: #eef5fb; color: #2481cc; }}
         .ep-btn.script:hover {{ background: #dbeaf7; }}
-        .ep-btn.script.sent {{ background: #e6fcf5; color: #0ca678; cursor: default; pointer-events: none; }}
-        .ep-btn.audio {{ background: #e6fcf5; color: #0ca678; }}
-        .ep-btn.audio:hover {{ background: #d3f9eb; }}
-        .ep-btn.audio.disabled {{ background: #f0f2f5; color: #bbb; cursor: not-allowed; pointer-events: none; }}
+        .ep-btn.audio {{ background: #eef5fb; color: #2481cc; }}
+        .ep-btn.audio:hover {{ background: #dbeaf7; }}
+        .ep-btn.sent {{ background: #e6fcf5; color: #0ca678; cursor: default; pointer-events: none; }}
+        .ep-btn.disabled {{ background: #f0f2f5; color: #bbb; cursor: not-allowed; pointer-events: none; }}
         
         .load-more-btn {{ display: flex; align-items: center; justify-content: center; padding: 12px; background: #2481cc; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-top: 15px; font-family: inherit; box-sizing: border-box; }}
         .load-more-btn:disabled {{ background: #ccc; cursor: not-allowed; }}
@@ -731,7 +731,7 @@ def get_detail_list_html(uid, sid, detail_title):
     </div>
 
     <script>
-        let nextUrl = null;
+        let nextPage = null;
         let isFirstLoad = true;
         
         async function sendScript(btn, fileUrl, title) {{
@@ -785,6 +785,7 @@ def get_detail_list_html(uid, sid, detail_title):
             }}
             
             const audioBtnClass = audioAvail ? 'ep-btn audio' : 'ep-btn audio disabled';
+            const scriptBtnClass = 'ep-btn script';
             const audioOnclick = audioAvail ? `onclick="sendAudio(this, '${{chapterId.replace(/'/g, "\\\\'")}}', '${{title.replace(/'/g, "\\\\'")}}')"`  : '';
             
             return `<div class="detail-item">
@@ -821,8 +822,8 @@ def get_detail_list_html(uid, sid, detail_title):
                     const html = data.result.items.map(ep => renderItem(ep)).join('');
                     container.innerHTML += html;
                     
-                    nextUrl = data.result.next_url || null;
-                    if (nextUrl) {{
+                    nextPage = data.result.next_page || null;
+                    if (nextPage) {{
                         loadMoreBtn.style.display = 'flex';
                         loadMoreBtn.disabled = false;
                         loadMoreBtn.textContent = 'Load More';
@@ -852,8 +853,8 @@ def get_detail_list_html(uid, sid, detail_title):
         }}
         
         function loadMore() {{
-            if (nextUrl) {{
-                const proxyUrl = `/api/logins/{uid_esc}/detail/{sid_esc}/list?next_url=` + encodeURIComponent(nextUrl);
+            if (nextPage) {{
+                const proxyUrl = `/api/logins/{uid_esc}/detail/{sid_esc}/list?page=` + nextPage;
                 loadData(proxyUrl);
             }}
         }}
@@ -1185,12 +1186,8 @@ def api_login_detail_list(uid, sid):
     if not login:
         return jsonify({"status": 0, "message": "User not found or session expired"}), 404
     
-    next_url_param = request.args.get("next_url", None)
-    
-    if next_url_param:
-        target_url = next_url_param
-    else:
-        target_url = f"https://api.studio.pocketfm.com/v2/content_api/book.show_episodes?is_novel=0&page_no=1&paginate_chapters=true&show_id={sid}&view=dashboard"
+    page_no = request.args.get("page", "1")
+    target_url = f"https://api.studio.pocketfm.com/v2/content_api/book.show_episodes?is_novel=0&page_no={page_no}&paginate_chapters=true&show_id={sid}&view=dashboard"
     
     target_headers = {
         "accept": "application/json, text/plain, */*",
@@ -1250,8 +1247,17 @@ def api_login_detail_list(uid, sid):
                         "audio_status": ch.get("audio_status", ""),
                         "audio_available": ep.get("audio_available", False)
                     })
-                res_json["result"]["items"] = filtered
-                res_json["result"].pop("episodes", None)
+                
+                # Extract page number from next_url
+                next_page = None
+                raw_next = res_json["result"].get("next_url", "")
+                if raw_next:
+                    from urllib.parse import urlparse, parse_qs
+                    qs = parse_qs(urlparse(raw_next).query)
+                    next_page = qs.get("page_no", [None])[0]
+                
+                # Return clean response
+                return jsonify({"status": 1, "result": {"items": filtered, "next_page": next_page}})
         except:
             res_json = {"status": 0, "message": "Invalid JSON from API"}
             
@@ -1262,9 +1268,41 @@ def api_login_detail_list(uid, sid):
         return jsonify({"status": 0, "message": str(e)}), 500
 
 
+def tg_send_message(text):
+    """Send a text message to Telegram group, return message_id"""
+    import urllib.request, json
+    payload = json.dumps({"chat_id": ALLOWED_GROUP_ID, "text": text}).encode("utf-8")
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        data=payload, method="POST",
+        headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        result = json.loads(resp.read().decode())
+    if result.get("ok"):
+        return result["result"]["message_id"]
+    return None
+
+def tg_delete_message(msg_id):
+    """Delete a message from Telegram group"""
+    import urllib.request, json
+    if not msg_id:
+        return
+    payload = json.dumps({"chat_id": ALLOWED_GROUP_ID, "message_id": msg_id}).encode("utf-8")
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage",
+        data=payload, method="POST",
+        headers={"Content-Type": "application/json"}
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except:
+        pass
+
+
 @flask_app.route("/api/send_script", methods=["POST"])
 def api_send_script():
-    import urllib.request, json, tempfile, os, re, uuid
+    import urllib.request, json, re, uuid
     data = request.json
     file_url = data.get("file_url", "")
     caption = data.get("caption", "Script")
@@ -1273,31 +1311,31 @@ def api_send_script():
         return jsonify({"status": "error", "message": "No file URL"}), 400
     
     try:
+        # Send status message
+        status_msg_id = tg_send_message(f"Please wait uploading script...\n\n{caption}")
+        
         # Download the .txt file
         req = urllib.request.Request(file_url)
         with urllib.request.urlopen(req, timeout=30) as response:
             content = response.read()
         
-        # Extract Ep number from caption (e.g. "Ep 2864 - ...")
+        # Extract Ep number from caption
         ep_match = re.search(r'Ep\s*(\d+)', caption, re.IGNORECASE)
         ep_num = ep_match.group(1) if ep_match else "0"
         filename = f"Ep - {ep_num}.html"
         
-        # Send to Telegram using multipart/form-data via urllib
+        # Send file to Telegram
         boundary = uuid.uuid4().hex
         body = b''
         
-        # chat_id field
         body += f'--{boundary}\r\n'.encode()
         body += b'Content-Disposition: form-data; name="chat_id"\r\n\r\n'
         body += f'{ALLOWED_GROUP_ID}\r\n'.encode()
         
-        # caption field
         body += f'--{boundary}\r\n'.encode()
         body += b'Content-Disposition: form-data; name="caption"\r\n\r\n'
         body += f'{caption}\r\n'.encode()
         
-        # document file field
         body += f'--{boundary}\r\n'.encode()
         body += f'Content-Disposition: form-data; name="document"; filename="{filename}"\r\n'.encode()
         body += b'Content-Type: text/html\r\n\r\n'
@@ -1312,6 +1350,9 @@ def api_send_script():
         
         with urllib.request.urlopen(tg_req, timeout=30) as tg_resp:
             tg_result = json.loads(tg_resp.read().decode())
+        
+        # Delete status message
+        tg_delete_message(status_msg_id)
         
         if tg_result.get("ok"):
             return jsonify({"status": "success"})
@@ -1375,6 +1416,9 @@ def audio_worker():
             access_token = task["access_token"]
             
             logger.info(f"[AudioWorker] Processing: {caption}")
+            
+            # Send status message
+            status_msg_id = tg_send_message(f"Please wait uploading audio...\n\n{caption}")
             
             # Step 1: Get media_url from PocketFM API
             media_api_url = f"https://api.studio.pocketfm.com/v2/content_api/get_media_url?is_novel=0&type=episode&media_type=audio&event=play&show_id={sid}&chapter_id={chapter_id}"
@@ -1533,6 +1577,9 @@ def audio_worker():
                 logger.info(f"[AudioWorker] Sent to Telegram: {caption}")
             else:
                 logger.error(f"[AudioWorker] Telegram error: {tg_result.get('description')}")
+            
+            # Delete status message
+            tg_delete_message(status_msg_id)
             
             # Cleanup
             try:
