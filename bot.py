@@ -641,16 +641,19 @@ def get_login_detail_html(uid, name):
                 if(res.ok && data.status === 1 && data.result && data.result.books && data.result.books.length > 0) {{
                     const container = document.getElementById('list-container');
                     container.style.display = 'flex';
-                    container.innerHTML = data.result.books.map(b => `
-                        <div class="item" style="cursor:pointer;" onclick="sessionStorage.setItem('dt_'+encodeURIComponent(b.show_id), b.show_title); window.location.href='/login/{uid_esc}/detail/${{encodeURIComponent(b.show_id)}}'">
+                    container.innerHTML = data.result.books.map(b => {
+                        const sid = b.show_id || '';
+                        const stitle = (b.show_title || '').replace(/'/g, "\\'");
+                        return `
+                        <div class="item" style="cursor:pointer;" onclick="goToDetail('${sid}', '${stitle}')">
                             <div style="width:80px; height:80px; background:#f0f2f5; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                                ${{b.image_url ? `<img src="${{b.image_url}}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}}
+                                ${b.image_url ? `<img src="${b.image_url}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:26px;">📺</span>'}
                             </div>
                             <div style="display:flex; flex-direction:column; overflow:hidden; padding: 10px; width: 100%;">
-                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${{b.show_title}}</div>
+                                <div style="font-weight:600; font-size:15px; color:#1c1e21; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; word-wrap:break-word;">${b.show_title}</div>
                             </div>
-                        </div>
-                    `).join('');
+                        </div>`;
+                    }}).join('');
                 }} else {{
                     document.getElementById('empty-state').style.display = 'flex';
                     document.getElementById('empty-state').innerHTML = 'No items found...';
@@ -661,6 +664,11 @@ def get_login_detail_html(uid, name):
                 document.getElementById('empty-state').style.display = 'flex';
                 document.getElementById('empty-state').innerHTML = 'No items found...';
             }}
+        }}
+        
+        function goToDetail(sid, title) {{
+            sessionStorage.setItem('dt_' + sid, title);
+            window.location.href = '/login/{uid_esc}/detail/' + encodeURIComponent(sid);
         }}
         
         loadUserItems();
@@ -1312,6 +1320,22 @@ def tg_delete_message(msg_id):
     except:
         pass
 
+def tg_edit_message(msg_id, text):
+    """Edit a text message in Telegram group"""
+    import urllib.request, json
+    if not msg_id:
+        return
+    payload = json.dumps({"chat_id": ALLOWED_GROUP_ID, "message_id": msg_id, "text": text}).encode("utf-8")
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/editMessageText",
+        data=payload, method="POST",
+        headers={"Content-Type": "application/json"}
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+    except:
+        pass
+
 
 @flask_app.route("/api/send_script", methods=["POST"])
 def api_send_script():
@@ -1324,8 +1348,8 @@ def api_send_script():
         return jsonify({"status": "error", "message": "No file URL"}), 400
     
     try:
-        # Send status message
-        status_msg_id = tg_send_message(f"Please wait uploading script...\n\n{caption}")
+        # Send status: downloading
+        status_msg_id = tg_send_message(f"Downloading script...\n\n{caption}")
         
         # Download the .txt file
         req = urllib.request.Request(file_url)
@@ -1336,6 +1360,9 @@ def api_send_script():
         ep_match = re.search(r'Ep\s*(\d+)', caption, re.IGNORECASE)
         ep_num = ep_match.group(1) if ep_match else "0"
         filename = f"Ep - {ep_num}.html"
+        
+        # Update status: uploading
+        tg_edit_message(status_msg_id, f"Uploading script...\n\n{caption}")
         
         # Send file to Telegram
         boundary = uuid.uuid4().hex
@@ -1431,7 +1458,7 @@ def audio_worker():
             logger.info(f"[AudioWorker] Processing: {caption}")
             
             # Send status message
-            status_msg_id = tg_send_message(f"Please wait uploading audio...\n\n{caption}")
+            status_msg_id = tg_send_message(f"Downloading audio...\n\n{caption}")
             
             # Step 1: Get media_url from PocketFM API
             media_api_url = f"https://api.studio.pocketfm.com/v2/content_api/get_media_url?is_novel=0&type=episode&media_type=audio&event=play&show_id={sid}&chapter_id={chapter_id}"
@@ -1482,6 +1509,9 @@ def audio_worker():
             
             logger.info(f"[AudioWorker] Got media_url, converting...")
             
+            # Update status: converting
+            tg_edit_message(status_msg_id, f"Converting audio...\n\n{caption}")
+            
             # Step 2: Convert directly from URL to MP3 using ffmpeg (stream, no download)
             tmp_dir = tempfile.mkdtemp()
             ep_match = re.search(r'Ep\s*(\d+)', caption, re.IGNORECASE)
@@ -1523,6 +1553,9 @@ def audio_worker():
             
             out_size = os.path.getsize(output_path)
             logger.info(f"[AudioWorker] Converted to {out_size / (1024*1024):.1f}MB MP3")
+            
+            # Update status: uploading
+            tg_edit_message(status_msg_id, f"Uploading audio...\n\n{caption}")
             
             # Step 4: Upload to Telegram
             with open(output_path, 'rb') as f:
