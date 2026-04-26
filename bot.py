@@ -1524,7 +1524,8 @@ def audio_worker():
             # Stream URL directly into ffmpeg (download + convert simultaneously)
             # 64kbps mono = ~5.5MB per 12min, always under 30MB
             result = subprocess.run(
-                ["ffmpeg", "-y", "-i", media_url, "-vn", "-ac", "1", "-b:a", "64k", output_path],
+                ["ffmpeg", "-y", "-i", media_url, "-vn", "-ac", "1", "-b:a", "64k",
+                 "-metadata", "artist=@Index_Guide", output_path],
                 capture_output=True, timeout=600
             )
             
